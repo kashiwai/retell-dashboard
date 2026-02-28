@@ -1,15 +1,8 @@
 import { NextResponse } from 'next/server';
 import { Retell } from 'retell-sdk';
 
-// Initialize Retell client only when API key is available
-const getRetellClient = () => {
-  if (!process.env.RETELL_API_KEY) {
-    throw new Error('RETELL_API_KEY is not configured');
-  }
-  return new Retell({ 
-    apiKey: process.env.RETELL_API_KEY 
-  });
-};
+// Force dynamic rendering to prevent build-time execution
+export const dynamic = 'force-dynamic';
 
 export async function GET() {
   try {
@@ -21,7 +14,10 @@ export async function GET() {
       );
     }
 
-    const retellClient = getRetellClient();
+    // Initialize Retell client at runtime
+    const retellClient = new Retell({ 
+      apiKey: process.env.RETELL_API_KEY 
+    });
     
     // Get today's date range
     const today = new Date();
