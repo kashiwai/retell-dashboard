@@ -1,0 +1,824 @@
+'use client';
+
+import { useState, useEffect } from "react";
+import { 
+  Phone, Plus, Settings, Bell, BarChart3, Bot, Hash, X, Mic, Play, Pause, 
+  MessageSquare, Volume2, CheckCircle, ChevronRight, Menu, RefreshCw,
+  PhoneIncoming, PhoneOutgoing, Clock, TrendingUp, Users, Zap,
+  Star, Globe, Shield, Activity, Headphones, Send, ExternalLink,
+  Calendar, User, Mail, MapPin, Filter, Search, Download, MoreVertical
+} from "lucide-react";
+
+export default function ModernDashboard() {
+  const [activeNav, setActiveNav] = useState("dashboard");
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [loading, setLoading] = useState(false);
+  
+  // States
+  const [agents, setAgents] = useState<any[]>([]);
+  const [showCreateAgent, setShowCreateAgent] = useState(false);
+  const [newAgent, setNewAgent] = useState({ name: "", voice_id: "", language: "ja" });
+  const [creatingAgent, setCreatingAgent] = useState(false);
+  const [showNotificationConfig, setShowNotificationConfig] = useState<string | null>(null);
+  const [slackWebhook, setSlackWebhook] = useState("");
+  const [lineToken, setLineToken] = useState("");
+  const [savingConfig, setSavingConfig] = useState(false);
+  const [calls, setCalls] = useState<any[]>([]);
+  const [selectedCall, setSelectedCall] = useState<any>(null);
+  const [playingAudio, setPlayingAudio] = useState<string | null>(null);
+  const [phoneNumbers, setPhoneNumbers] = useState<any[]>([]);
+  const [stats, setStats] = useState({
+    todayCalls: 0,
+    avgDuration: "0:00",
+    aiResolution: 85,
+    satisfaction: 92
+  });
+  
+  // Fetch data
+  const fetchData = async () => {
+    setLoading(true);
+    try {
+      const [agentsRes, callsRes, numbersRes, statsRes] = await Promise.all([
+        fetch("/api/agents"),
+        fetch("/api/calls?limit=20"),
+        fetch("/api/phone-numbers"),
+        fetch("/api/dashboard")
+      ]);
+      
+      if (agentsRes.ok) setAgents(await agentsRes.json());
+      if (callsRes.ok) setCalls(await callsRes.json());
+      if (numbersRes.ok) setPhoneNumbers(await numbersRes.json());
+      if (statsRes.ok) {
+        const data = await statsRes.json();
+        setStats({
+          todayCalls: data.todaysCalls || 0,
+          avgDuration: data.avgDuration || "0:00",
+          aiResolution: data.aiResolutionRate || 85,
+          satisfaction: data.sentimentAnalysis?.positive || 92
+        });
+      }
+    } catch (error) {
+      console.error("Failed to fetch data:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+  
+  useEffect(() => {
+    fetchData();
+    const interval = setInterval(fetchData, 30000);
+    return () => clearInterval(interval);
+  }, []);
+  
+  // Create agent
+  const handleCreateAgent = async () => {
+    if (!newAgent.name) return;
+    setCreatingAgent(true);
+    try {
+      const res = await fetch("/api/agents", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          agent_name: newAgent.name,
+          voice_id: newAgent.voice_id || "11labs-Adrian",
+          language: newAgent.language
+        })
+      });
+      if (res.ok) {
+        setShowCreateAgent(false);
+        setNewAgent({ name: "", voice_id: "", language: "ja" });
+        fetchData();
+      }
+    } catch (error) {
+      console.error("Failed to create agent:", error);
+    } finally {
+      setCreatingAgent(false);
+    }
+  };
+  
+  // Save notification config
+  const handleSaveNotificationConfig = async (type: string) => {
+    setSavingConfig(true);
+    try {
+      const config = type === "Slack" 
+        ? { webhook_url: slackWebhook }
+        : { access_token: lineToken };
+      const res = await fetch("/api/websocket", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ type: type.toLowerCase(), config })
+      });
+      if (res.ok) {
+        setShowNotificationConfig(null);
+      }
+    } catch (error) {
+      console.error("Failed to save config:", error);
+    } finally {
+      setSavingConfig(false);
+    }
+  };
+  
+  // Navigation
+  const navItems = [
+    { id: "dashboard", label: "ダッシュボード", icon: BarChart3, color: "blue" },
+    { id: "agents", label: "エージェント", icon: Bot, color: "purple" },
+    { id: "calls", label: "通話履歴", icon: Phone, color: "green" },
+    { id: "numbers", label: "電話番号", icon: Hash, color: "orange" },
+    { id: "notifications", label: "通知設定", icon: Bell, color: "pink" },
+    { id: "settings", label: "設定", icon: Settings, color: "gray" }
+  ];
+  
+  // Gradient backgrounds for cards
+  const gradients = {
+    blue: "from-blue-500/10 to-cyan-500/5",
+    purple: "from-purple-500/10 to-pink-500/5",
+    green: "from-green-500/10 to-emerald-500/5",
+    orange: "from-orange-500/10 to-yellow-500/5",
+    pink: "from-pink-500/10 to-rose-500/5"
+  };
+  
+  // Render content
+  const renderContent = () => {
+    switch (activeNav) {
+      case "dashboard":
+        return (
+          <div className="space-y-6">
+            {/* Header */}
+            <div className="bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 rounded-3xl p-8 text-white shadow-2xl">
+              <div className="flex justify-between items-start">
+                <div>
+                  <h1 className="text-3xl font-bold mb-2">こんにちは！👋</h1>
+                  <p className="text-white/80">今日のAI電話対応状況をご確認ください</p>
+                </div>
+                <button 
+                  onClick={fetchData} 
+                  className="p-3 bg-white/20 backdrop-blur rounded-xl hover:bg-white/30 transition-all"
+                >
+                  <RefreshCw size={20} className={loading ? "animate-spin" : ""} />
+                </button>
+              </div>
+              
+              {/* Quick Stats */}
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mt-8">
+                <div className="bg-white/20 backdrop-blur rounded-2xl p-4">
+                  <div className="flex items-center justify-between mb-2">
+                    <PhoneIncoming className="text-white/60" size={20} />
+                    <span className="text-xs bg-white/20 px-2 py-1 rounded-full">今日</span>
+                  </div>
+                  <p className="text-3xl font-bold">{stats.todayCalls}</p>
+                  <p className="text-sm text-white/70 mt-1">通話件数</p>
+                </div>
+                <div className="bg-white/20 backdrop-blur rounded-2xl p-4">
+                  <div className="flex items-center justify-between mb-2">
+                    <Clock className="text-white/60" size={20} />
+                    <TrendingUp className="text-green-300" size={16} />
+                  </div>
+                  <p className="text-3xl font-bold">{stats.avgDuration}</p>
+                  <p className="text-sm text-white/70 mt-1">平均時間</p>
+                </div>
+                <div className="bg-white/20 backdrop-blur rounded-2xl p-4">
+                  <div className="flex items-center justify-between mb-2">
+                    <Zap className="text-white/60" size={20} />
+                    <span className="text-xs text-green-300">+5%</span>
+                  </div>
+                  <p className="text-3xl font-bold">{stats.aiResolution}%</p>
+                  <p className="text-sm text-white/70 mt-1">AI解決率</p>
+                </div>
+                <div className="bg-white/20 backdrop-blur rounded-2xl p-4">
+                  <div className="flex items-center justify-between mb-2">
+                    <Star className="text-white/60" size={20} />
+                    <span className="text-xs text-yellow-300">⭐</span>
+                  </div>
+                  <p className="text-3xl font-bold">{stats.satisfaction}%</p>
+                  <p className="text-sm text-white/70 mt-1">満足度</p>
+                </div>
+              </div>
+            </div>
+            
+            {/* Active Agents */}
+            <div className="grid lg:grid-cols-2 gap-6">
+              <div className="bg-white rounded-2xl shadow-lg overflow-hidden">
+                <div className="p-6 border-b bg-gradient-to-r from-purple-50 to-pink-50">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 bg-purple-100 rounded-xl">
+                        <Bot className="text-purple-600" size={20} />
+                      </div>
+                      <h2 className="font-bold text-gray-900">稼働中エージェント</h2>
+                    </div>
+                    <span className="px-3 py-1 bg-green-100 text-green-700 text-xs font-medium rounded-full">
+                      {agents.length} Active
+                    </span>
+                  </div>
+                </div>
+                <div className="p-6 space-y-4">
+                  {agents.slice(0, 3).map((agent, i) => (
+                    <div key={agent.id} className="flex items-center justify-between p-3 rounded-xl hover:bg-gray-50 transition-all">
+                      <div className="flex items-center gap-3">
+                        <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${["from-blue-500 to-cyan-500", "from-purple-500 to-pink-500", "from-green-500 to-emerald-500"][i]} flex items-center justify-center text-white font-bold shadow-lg`}>
+                          {agent.name[0]}
+                        </div>
+                        <div>
+                          <p className="font-medium text-gray-900">{agent.name}</p>
+                          <p className="text-xs text-gray-500">本日 {agent.calls_today}件処理</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
+                        <span className="text-xs text-gray-500">稼働中</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              
+              {/* Recent Calls */}
+              <div className="bg-white rounded-2xl shadow-lg overflow-hidden">
+                <div className="p-6 border-b bg-gradient-to-r from-blue-50 to-cyan-50">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 bg-blue-100 rounded-xl">
+                        <PhoneIncoming className="text-blue-600" size={20} />
+                      </div>
+                      <h2 className="font-bold text-gray-900">最新の通話</h2>
+                    </div>
+                    <button 
+                      onClick={() => setActiveNav("calls")}
+                      className="text-blue-600 text-sm font-medium hover:text-blue-700"
+                    >
+                      すべて見る →
+                    </button>
+                  </div>
+                </div>
+                <div className="p-6 space-y-4">
+                  {calls.slice(0, 3).map((call) => (
+                    <div 
+                      key={call.id} 
+                      onClick={() => setSelectedCall(call)}
+                      className="flex items-center justify-between p-3 rounded-xl hover:bg-gray-50 transition-all cursor-pointer"
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center">
+                          <User size={16} className="text-gray-600" />
+                        </div>
+                        <div>
+                          <p className="font-medium text-gray-900">{call.from || "不明"}</p>
+                          <p className="text-xs text-gray-500">{call.time} · {call.duration}</p>
+                        </div>
+                      </div>
+                      <ChevronRight size={16} className="text-gray-400" />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+        
+      case "agents":
+        return (
+          <div className="space-y-6">
+            {/* Header */}
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+              <div>
+                <h1 className="text-2xl font-bold text-gray-900">エージェント管理</h1>
+                <p className="text-gray-500 mt-1">AIエージェントの作成と管理</p>
+              </div>
+              <button
+                onClick={() => setShowCreateAgent(true)}
+                className="px-6 py-3 bg-gradient-to-r from-purple-600 to-pink-600 text-white font-medium rounded-xl shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition-all flex items-center gap-2"
+              >
+                <Plus size={20} />
+                新規作成
+              </button>
+            </div>
+            
+            {/* Agent Cards */}
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {agents.map((agent, i) => (
+                <div key={agent.id} className="bg-white rounded-2xl shadow-lg overflow-hidden hover:shadow-xl transition-all">
+                  <div className={`h-2 bg-gradient-to-r ${["from-blue-500 to-cyan-500", "from-purple-500 to-pink-500", "from-green-500 to-emerald-500"][i % 3]}`}></div>
+                  <div className="p-6">
+                    <div className="flex items-start justify-between mb-4">
+                      <div className="p-3 bg-gradient-to-br from-purple-100 to-pink-100 rounded-xl">
+                        <Bot size={24} className="text-purple-600" />
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
+                        <span className="text-xs text-gray-500">稼働中</span>
+                      </div>
+                    </div>
+                    <h3 className="font-bold text-gray-900 text-lg mb-2">{agent.name}</h3>
+                    <div className="space-y-2 mb-4">
+                      <div className="flex items-center gap-2 text-sm text-gray-500">
+                        <Mic size={14} />
+                        <span>{agent.voice}</span>
+                      </div>
+                      <div className="flex items-center gap-2 text-sm text-gray-500">
+                        <Globe size={14} />
+                        <span>{agent.lang === "ja" ? "日本語" : agent.lang}</span>
+                      </div>
+                      <div className="flex items-center gap-2 text-sm text-gray-500">
+                        <Activity size={14} />
+                        <span>本日 {agent.calls_today}件</span>
+                      </div>
+                    </div>
+                    <div className="flex gap-2">
+                      <button className="flex-1 px-3 py-2 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition-colors text-sm font-medium">
+                        編集
+                      </button>
+                      <button className="flex-1 px-3 py-2 bg-green-50 text-green-600 rounded-lg hover:bg-green-100 transition-colors text-sm font-medium">
+                        テスト
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+              
+              {/* Add New Card */}
+              <button
+                onClick={() => setShowCreateAgent(true)}
+                className="bg-white rounded-2xl shadow-lg overflow-hidden hover:shadow-xl transition-all border-2 border-dashed border-gray-200 min-h-[280px] flex flex-col items-center justify-center group"
+              >
+                <div className="p-3 bg-gray-100 rounded-xl mb-3 group-hover:scale-110 transition-transform">
+                  <Plus size={24} className="text-gray-400" />
+                </div>
+                <p className="text-gray-500 font-medium">新規エージェント</p>
+                <p className="text-gray-400 text-sm mt-1">クリックして作成</p>
+              </button>
+            </div>
+          </div>
+        );
+        
+      case "calls":
+        return (
+          <div className="space-y-6">
+            {/* Header with Filters */}
+            <div className="flex flex-col lg:flex-row justify-between gap-4">
+              <div>
+                <h1 className="text-2xl font-bold text-gray-900">通話履歴</h1>
+                <p className="text-gray-500 mt-1">すべての通話記録を管理</p>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
+                  <input
+                    type="text"
+                    placeholder="検索..."
+                    className="pl-9 pr-4 py-2 bg-white border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+                <button className="px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm hover:bg-gray-50 flex items-center gap-2">
+                  <Filter size={16} />
+                  フィルター
+                </button>
+                <button className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700 flex items-center gap-2">
+                  <Download size={16} />
+                  エクスポート
+                </button>
+              </div>
+            </div>
+            
+            {/* Calls Table */}
+            <div className="bg-white rounded-2xl shadow-lg overflow-hidden">
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead className="bg-gray-50 border-b">
+                    <tr>
+                      <th className="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">時刻</th>
+                      <th className="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">発信者</th>
+                      <th className="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">要約</th>
+                      <th className="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">時間</th>
+                      <th className="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">感情</th>
+                      <th className="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">状態</th>
+                      <th className="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider"></th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-100">
+                    {calls.map((call) => (
+                      <tr key={call.id} className="hover:bg-gray-50 transition-colors">
+                        <td className="px-6 py-4 text-sm text-gray-900">{call.time}</td>
+                        <td className="px-6 py-4 text-sm text-gray-900">{call.from || "不明"}</td>
+                        <td className="px-6 py-4 text-sm text-gray-500 max-w-xs truncate">{call.summary || "-"}</td>
+                        <td className="px-6 py-4 text-sm text-gray-900">{call.duration}</td>
+                        <td className="px-6 py-4">
+                          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                            call.sentiment === "positive" ? "bg-green-100 text-green-800" :
+                            call.sentiment === "negative" ? "bg-red-100 text-red-800" :
+                            "bg-gray-100 text-gray-800"
+                          }`}>
+                            {call.sentiment === "positive" ? "😊" : call.sentiment === "negative" ? "😔" : "😐"}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4">
+                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                            完了
+                          </span>
+                        </td>
+                        <td className="px-6 py-4">
+                          <button 
+                            onClick={() => setSelectedCall(call)}
+                            className="text-blue-600 hover:text-blue-800"
+                          >
+                            <MoreVertical size={16} />
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        );
+        
+      case "numbers":
+        return (
+          <div className="space-y-6">
+            <div className="flex justify-between items-center">
+              <div>
+                <h1 className="text-2xl font-bold text-gray-900">電話番号管理</h1>
+                <p className="text-gray-500 mt-1">受信用電話番号の設定</p>
+              </div>
+            </div>
+            
+            <div className="grid gap-4">
+              {phoneNumbers.map((number) => (
+                <div key={number.id} className="bg-white rounded-2xl shadow-lg p-6 hover:shadow-xl transition-all">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-4">
+                      <div className="p-3 bg-gradient-to-br from-orange-100 to-yellow-100 rounded-xl">
+                        <Phone size={24} className="text-orange-600" />
+                      </div>
+                      <div>
+                        <h3 className="font-bold text-gray-900 text-lg">{number.number}</h3>
+                        <p className="text-gray-500 text-sm mt-1">{number.nickname}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <span className="px-3 py-1 bg-green-100 text-green-700 text-xs font-medium rounded-full">
+                        有効
+                      </span>
+                      <button className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
+                        <Settings size={16} className="text-gray-500" />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        );
+        
+      case "notifications":
+        return (
+          <div className="space-y-6">
+            <div>
+              <h1 className="text-2xl font-bold text-gray-900">通知設定</h1>
+              <p className="text-gray-500 mt-1">外部サービスとの連携</p>
+            </div>
+            
+            <div className="grid md:grid-cols-2 gap-6">
+              {/* Slack */}
+              <div className="bg-white rounded-2xl shadow-lg overflow-hidden">
+                <div className="h-2 bg-gradient-to-r from-purple-500 to-pink-500"></div>
+                <div className="p-6">
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center gap-3">
+                      <div className="p-3 bg-purple-100 rounded-xl">
+                        <MessageSquare size={24} className="text-purple-600" />
+                      </div>
+                      <div>
+                        <h3 className="font-bold text-gray-900">Slack</h3>
+                        <p className="text-sm text-gray-500">
+                          {slackWebhook ? "接続済み" : "未接続"}
+                        </p>
+                      </div>
+                    </div>
+                    {slackWebhook && (
+                      <span className="w-2 h-2 bg-green-500 rounded-full"></span>
+                    )}
+                  </div>
+                  <p className="text-sm text-gray-600 mb-4">
+                    通話終了時に自動でSlackに通知を送信します
+                  </p>
+                  <button
+                    onClick={() => setShowNotificationConfig("Slack")}
+                    className="w-full px-4 py-2 bg-purple-50 text-purple-600 rounded-lg hover:bg-purple-100 transition-colors font-medium"
+                  >
+                    {slackWebhook ? "設定変更" : "接続する"}
+                  </button>
+                </div>
+              </div>
+              
+              {/* LINE */}
+              <div className="bg-white rounded-2xl shadow-lg overflow-hidden">
+                <div className="h-2 bg-gradient-to-r from-green-500 to-emerald-500"></div>
+                <div className="p-6">
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center gap-3">
+                      <div className="p-3 bg-green-100 rounded-xl">
+                        <Send size={24} className="text-green-600" />
+                      </div>
+                      <div>
+                        <h3 className="font-bold text-gray-900">LINE</h3>
+                        <p className="text-sm text-gray-500">
+                          {lineToken ? "接続済み" : "未接続"}
+                        </p>
+                      </div>
+                    </div>
+                    {lineToken && (
+                      <span className="w-2 h-2 bg-green-500 rounded-full"></span>
+                    )}
+                  </div>
+                  <p className="text-sm text-gray-600 mb-4">
+                    重要な通話をLINEでリアルタイム通知
+                  </p>
+                  <button
+                    onClick={() => setShowNotificationConfig("LINE")}
+                    className="w-full px-4 py-2 bg-green-50 text-green-600 rounded-lg hover:bg-green-100 transition-colors font-medium"
+                  >
+                    {lineToken ? "設定変更" : "接続する"}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+        
+      default:
+        return (
+          <div className="flex items-center justify-center h-96">
+            <div className="text-center">
+              <Settings size={48} className="mx-auto text-gray-300 mb-4" />
+              <p className="text-gray-500">このページは開発中です</p>
+            </div>
+          </div>
+        );
+    }
+  };
+  
+  return (
+    <div className="min-h-screen bg-gray-50 flex">
+      {/* Sidebar */}
+      <aside className={`${sidebarOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"} fixed lg:static inset-y-0 left-0 z-40 w-72 bg-white border-r transition-transform shadow-xl lg:shadow-none`}>
+        <div className="p-6 border-b bg-gradient-to-r from-blue-600 to-purple-600">
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-white/20 backdrop-blur rounded-xl">
+              <Phone className="text-white" size={24} />
+            </div>
+            <div>
+              <h1 className="text-xl font-bold text-white">Retell AI</h1>
+              <p className="text-xs text-white/70">Dashboard v2.0</p>
+            </div>
+          </div>
+        </div>
+        
+        <nav className="p-3 space-y-1">
+          {navItems.map((item) => {
+            const Icon = item.icon;
+            const isActive = activeNav === item.id;
+            return (
+              <button
+                key={item.id}
+                onClick={() => {
+                  setActiveNav(item.id);
+                  setSidebarOpen(false);
+                }}
+                className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all ${
+                  isActive
+                    ? `bg-gradient-to-r ${gradients[item.color as keyof typeof gradients]} text-${item.color}-600 shadow-sm`
+                    : "text-gray-600 hover:bg-gray-50"
+                }`}
+              >
+                <Icon size={20} className={isActive ? `text-${item.color}-600` : "text-gray-400"} />
+                {item.label}
+                {isActive && (
+                  <div className="ml-auto w-1 h-4 bg-gradient-to-b from-blue-600 to-purple-600 rounded-full"></div>
+                )}
+              </button>
+            );
+          })}
+        </nav>
+      </aside>
+      
+      {/* Main Content */}
+      <main className="flex-1">
+        {/* Top Bar */}
+        <div className="bg-white border-b px-6 py-4">
+          <div className="flex items-center justify-between">
+            <button
+              onClick={() => setSidebarOpen(!sidebarOpen)}
+              className="lg:hidden p-2 hover:bg-gray-100 rounded-lg"
+            >
+              <Menu size={24} />
+            </button>
+            <div className="flex items-center gap-3 ml-auto">
+              <button className="p-2 hover:bg-gray-100 rounded-lg relative">
+                <Bell size={20} className="text-gray-600" />
+                <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>
+              </button>
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center text-white font-bold shadow-lg">
+                A
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <div className="p-6">
+          {renderContent()}
+        </div>
+      </main>
+      
+      {/* Create Agent Modal */}
+      {showCreateAgent && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl p-6 w-full max-w-md shadow-2xl">
+            <h3 className="text-xl font-bold text-gray-900 mb-6">新規エージェント作成</h3>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">エージェント名</label>
+                <input
+                  type="text"
+                  value={newAgent.name}
+                  onChange={(e) => setNewAgent({ ...newAgent, name: e.target.value })}
+                  className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  placeholder="例: 営業受付AI"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">音声ID</label>
+                <input
+                  type="text"
+                  value={newAgent.voice_id}
+                  onChange={(e) => setNewAgent({ ...newAgent, voice_id: e.target.value })}
+                  className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  placeholder="例: 11labs-Adrian"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">言語</label>
+                <select
+                  value={newAgent.language}
+                  onChange={(e) => setNewAgent({ ...newAgent, language: e.target.value })}
+                  className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                >
+                  <option value="ja">日本語</option>
+                  <option value="en">英語</option>
+                </select>
+              </div>
+            </div>
+            <div className="flex gap-3 mt-6">
+              <button
+                onClick={handleCreateAgent}
+                disabled={creatingAgent || !newAgent.name}
+                className="flex-1 px-4 py-2 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-lg font-medium hover:shadow-lg transition-all disabled:opacity-50"
+              >
+                {creatingAgent ? "作成中..." : "作成"}
+              </button>
+              <button
+                onClick={() => setShowCreateAgent(false)}
+                className="flex-1 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg font-medium hover:bg-gray-200 transition-colors"
+              >
+                キャンセル
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      
+      {/* Notification Config Modal */}
+      {showNotificationConfig && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl p-6 w-full max-w-md shadow-2xl">
+            <h3 className="text-xl font-bold text-gray-900 mb-6">{showNotificationConfig}設定</h3>
+            <div className="space-y-4">
+              {showNotificationConfig === "Slack" ? (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Webhook URL</label>
+                  <input
+                    type="text"
+                    value={slackWebhook}
+                    onChange={(e) => setSlackWebhook(e.target.value)}
+                    className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                    placeholder="https://hooks.slack.com/services/..."
+                  />
+                  <p className="text-xs text-gray-500 mt-2">SlackのIncoming Webhook URLを入力してください</p>
+                </div>
+              ) : (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">アクセストークン</label>
+                  <input
+                    type="text"
+                    value={lineToken}
+                    onChange={(e) => setLineToken(e.target.value)}
+                    className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                    placeholder="LINE Notify トークン"
+                  />
+                  <p className="text-xs text-gray-500 mt-2">LINE Notifyのアクセストークンを入力してください</p>
+                </div>
+              )}
+            </div>
+            <div className="flex gap-3 mt-6">
+              <button
+                onClick={() => handleSaveNotificationConfig(showNotificationConfig)}
+                disabled={savingConfig}
+                className={`flex-1 px-4 py-2 ${
+                  showNotificationConfig === "Slack"
+                    ? "bg-gradient-to-r from-purple-600 to-pink-600"
+                    : "bg-gradient-to-r from-green-600 to-emerald-600"
+                } text-white rounded-lg font-medium hover:shadow-lg transition-all disabled:opacity-50`}
+              >
+                {savingConfig ? "保存中..." : "保存"}
+              </button>
+              <button
+                onClick={() => setShowNotificationConfig(null)}
+                className="flex-1 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg font-medium hover:bg-gray-200 transition-colors"
+              >
+                キャンセル
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      
+      {/* Call Detail Modal */}
+      {selectedCall && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl w-full max-w-3xl max-h-[90vh] overflow-hidden shadow-2xl">
+            <div className="p-6 border-b bg-gradient-to-r from-blue-50 to-purple-50">
+              <div className="flex justify-between items-start">
+                <div>
+                  <h3 className="text-xl font-bold text-gray-900">通話詳細</h3>
+                  <p className="text-sm text-gray-500 mt-1">{selectedCall.time}</p>
+                </div>
+                <button 
+                  onClick={() => setSelectedCall(null)} 
+                  className="p-2 hover:bg-white/50 rounded-lg transition-colors"
+                >
+                  <X size={20} className="text-gray-500" />
+                </button>
+              </div>
+            </div>
+            
+            <div className="p-6 space-y-6 overflow-y-auto max-h-[calc(90vh-120px)]">
+              {/* Call Info */}
+              <div className="grid md:grid-cols-2 gap-6">
+                <div>
+                  <p className="text-sm text-gray-500 mb-1">発信者</p>
+                  <p className="font-medium text-gray-900">{selectedCall.from || "不明"}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-500 mb-1">通話時間</p>
+                  <p className="font-medium text-gray-900">{selectedCall.duration}</p>
+                </div>
+              </div>
+              
+              {/* Summary */}
+              {selectedCall.summary && (
+                <div>
+                  <p className="text-sm text-gray-500 mb-2">要約</p>
+                  <div className="p-4 bg-blue-50 rounded-xl">
+                    <p className="text-gray-800">{selectedCall.summary}</p>
+                  </div>
+                </div>
+              )}
+              
+              {/* Recording */}
+              {selectedCall.recording_url && (
+                <div>
+                  <p className="text-sm text-gray-500 mb-3">録音</p>
+                  <div className="p-4 bg-gradient-to-r from-purple-50 to-pink-50 rounded-xl">
+                    <button
+                      onClick={() => setPlayingAudio(playingAudio === selectedCall.id ? null : selectedCall.id)}
+                      className="flex items-center gap-3 px-4 py-2 bg-white rounded-lg shadow-sm hover:shadow-md transition-all"
+                    >
+                      {playingAudio === selectedCall.id ? (
+                        <Pause size={20} className="text-purple-600" />
+                      ) : (
+                        <Play size={20} className="text-purple-600" />
+                      )}
+                      <span className="font-medium text-gray-900">
+                        {playingAudio === selectedCall.id ? "停止" : "再生"}
+                      </span>
+                    </button>
+                  </div>
+                </div>
+              )}
+              
+              {/* Transcript */}
+              {selectedCall.transcript && (
+                <div>
+                  <p className="text-sm text-gray-500 mb-2">文字起こし</p>
+                  <div className="p-4 bg-gray-50 rounded-xl">
+                    <p className="text-sm text-gray-700 whitespace-pre-wrap">{selectedCall.transcript}</p>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}

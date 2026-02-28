@@ -1,7 +1,7 @@
 "use client";
 
-import InteractiveDashboard from "@/components/dashboard-interactive";
+import ModernDashboard from "@/components/modern-dashboard";
 
 export default function Home() {
-  return <InteractiveDashboard />;
+  return <ModernDashboard />;
 }
