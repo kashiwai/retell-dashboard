@@ -1,41 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { LineChart, Line, AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
-import { Phone, PhoneIncoming, PhoneOutgoing, PhoneMissed, Clock, TrendingUp, Users, Settings, Bell, ChevronRight, Play, Pause, Search, Filter, MoreHorizontal, CheckCircle, AlertCircle, Smile, Frown, Meh, Volume2, MessageSquare, Bot, Hash, BarChart3, Zap, Moon, Sun, Menu, X, ExternalLink, Plus, Mic } from "lucide-react";
-
-// ─── Mock Data ───
-const callsData = [
-  { date: "2/22", calls: 12, minutes: 45 },
-  { date: "2/23", calls: 18, minutes: 62 },
-  { date: "2/24", calls: 8, minutes: 28 },
-  { date: "2/25", calls: 22, minutes: 78 },
-  { date: "2/26", calls: 15, minutes: 52 },
-  { date: "2/27", calls: 28, minutes: 95 },
-  { date: "2/28", calls: 20, minutes: 68 },
-];
-
-const sentimentData = [
-  { name: "ポジティブ", value: 62, color: "#10b981" },
-  { name: "ニュートラル", value: 28, color: "#6b7280" },
-  { name: "ネガティブ", value: 10, color: "#ef4444" },
-];
-
-const hourlyData = Array.from({ length: 24 }, (_, i) => ({
-  hour: `${i}時`,
-  calls: i >= 9 && i <= 18 ? Math.floor(Math.random() * 8 + 2) : Math.floor(Math.random() * 2),
-}));
-
-const recentCalls = [
-  { id: "1", time: "14:32", from: "090-1234-5678", name: "田中 太郎", duration: "3:24", sentiment: "positive", summary: "商品の在庫確認。A-200の在庫を問い合わせ、来週入荷予定と回答。折り返し希望。", status: "completed", purpose: "在庫確認" },
-  { id: "2", time: "14:15", from: "03-9876-5432", name: "株式会社サンプル", duration: "5:12", sentiment: "neutral", summary: "見積もり依頼。Webサイト制作の概算見積もりを希望。詳細をメールで送付するよう案内。", status: "completed", purpose: "見積もり依頼" },
-  { id: "3", time: "13:48", from: "080-5555-1234", name: "佐藤 花子", duration: "1:45", sentiment: "positive", summary: "予約変更。3/5 14時の予約を3/7 10時に変更希望。カレンダー確認後、変更完了。", status: "completed", purpose: "予約変更" },
-  { id: "4", time: "13:20", from: "070-8888-9999", name: "不明", duration: "0:32", sentiment: "negative", summary: "担当者への取次ぎを強く要求。AI対応に不満を示し、折り返しを依頼して切電。", status: "transferred", purpose: "クレーム" },
-  { id: "5", time: "12:55", from: "06-1111-2222", name: "山田 次郎", duration: "4:08", sentiment: "positive", summary: "サービス内容の問い合わせ。プランの違いについて説明し、資料送付を約束。", status: "completed", purpose: "サービス問合せ" },
-];
-
-const agents = [
-  { id: "1", name: "受付AI", status: "active", calls_today: 20, voice: "Mika（女性）", lang: "日本語" },
-  { id: "2", name: "予約受付AI", status: "active", calls_today: 8, voice: "Kenji（男性）", lang: "日本語" },
-];
+import { Phone, PhoneIncoming, PhoneOutgoing, PhoneMissed, Clock, TrendingUp, Users, Settings, Bell, ChevronRight, Play, Pause, Search, Filter, MoreHorizontal, CheckCircle, AlertCircle, Smile, Frown, Meh, Volume2, MessageSquare, Bot, Hash, BarChart3, Zap, Moon, Sun, Menu, X, ExternalLink, Plus, Mic, RefreshCw } from "lucide-react";
 
 // ─── Components ───
 const SentimentIcon = ({ sentiment, size = 16 }: { sentiment: string; size?: number }) => {
@@ -109,16 +74,127 @@ export default function CallFlowDashboard() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [selectedCall, setSelectedCall] = useState<any>(null);
   const [playingAudio, setPlayingAudio] = useState<any>(null);
+  
+  // API Data States
+  const [dashboardStats, setDashboardStats] = useState<any>(null);
+  const [recentCalls, setRecentCalls] = useState<any[]>([]);
+  const [analyticsData, setAnalyticsData] = useState<any>(null);
+  const [agents, setAgents] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [lastRefresh, setLastRefresh] = useState(new Date());
+  
+  // Fetch all data
+  const fetchData = async () => {
+    setLoading(true);
+    setError(null);
+    
+    try {
+      // Fetch all data in parallel
+      const [statsRes, callsRes, analyticsRes, agentsRes] = await Promise.all([
+        fetch('/api/dashboard'),
+        fetch('/api/calls?limit=10'),
+        fetch('/api/analytics'),
+        fetch('/api/agents')
+      ]);
+      
+      if (!statsRes.ok || !callsRes.ok || !analyticsRes.ok || !agentsRes.ok) {
+        throw new Error('Failed to fetch data');
+      }
+      
+      const [stats, calls, analytics, agentsData] = await Promise.all([
+        statsRes.json(),
+        callsRes.json(),
+        analyticsRes.json(),
+        agentsRes.json()
+      ]);
+      
+      setDashboardStats(stats);
+      setRecentCalls(calls);
+      setAnalyticsData(analytics);
+      setAgents(agentsData);
+      setLastRefresh(new Date());
+    } catch (err: any) {
+      setError(err.message);
+      console.error('Failed to fetch data:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+  
+  // Initial fetch and refresh every 30 seconds
+  useEffect(() => {
+    fetchData();
+    const interval = setInterval(fetchData, 30000);
+    return () => clearInterval(interval);
+  }, []);
+  
+  // Get data with defaults
+  const callsData = analyticsData?.callsData || [];
+  const sentimentData = analyticsData?.sentimentData || [];
+  const hourlyData = analyticsData?.hourlyData || [];
 
   // ─── Dashboard View ───
-  const DashboardView = () => (
+  const DashboardView = () => {
+    // Calculate stats from API data
+    const todaysCalls = dashboardStats?.todaysCalls || 0;
+    const avgDuration = dashboardStats?.avgDuration || "0:00";
+    const aiResolutionRate = dashboardStats?.aiResolutionRate || 0;
+    const sentiment = dashboardStats?.sentimentAnalysis || { positive: 0, neutral: 0, negative: 0 };
+    const customerSatisfaction = sentiment.positive || 0;
+    
+    return (
     <div className="space-y-6">
+      {/* Refresh Button */}
+      <div className="flex justify-between items-center">
+        <h1 className="text-2xl font-bold text-gray-900">ダッシュボード</h1>
+        <button 
+          onClick={fetchData}
+          disabled={loading}
+          className="flex items-center gap-2 px-4 py-2 bg-white border rounded-lg hover:bg-gray-50 disabled:opacity-50"
+        >
+          <RefreshCw size={16} className={loading ? "animate-spin" : ""} />
+          {loading ? "更新中..." : "更新"}
+        </button>
+      </div>
+      
+      {/* Error Message */}
+      {error && (
+        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
+          エラー: {error}
+        </div>
+      )}
+      
       {/* Stats */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard icon={PhoneIncoming} label="今日の着信" value="20" sub="受電率 95%" trend="+12%" color="blue" />
-        <StatCard icon={Clock} label="平均通話時間" value="2:48" sub="目標: 3分以内" trend="+5%" color="emerald" />
-        <StatCard icon={Smile} label="顧客満足度" value="92%" sub="ポジティブ率" trend="+3%" color="amber" />
-        <StatCard icon={Zap} label="AI解決率" value="78%" sub="転送なし完了" trend="+8%" color="violet" />
+        <StatCard 
+          icon={PhoneIncoming} 
+          label="今日の着信" 
+          value={todaysCalls.toString()} 
+          sub="本日の通話数" 
+          color="blue" 
+        />
+        <StatCard 
+          icon={Clock} 
+          label="平均通話時間" 
+          value={avgDuration} 
+          sub="全通話平均" 
+          color="emerald" 
+        />
+        <StatCard 
+          icon={Smile} 
+          label="顧客満足度" 
+          value={`${customerSatisfaction}%`} 
+          sub="ポジティブ率" 
+          color="amber" 
+        />
+        <StatCard 
+          icon={Zap} 
+          label="AI解決率" 
+          value={`${aiResolutionRate}%`} 
+          sub="転送なし完了" 
+          color="violet" 
+        />
       </div>
 
       {/* Charts Row */}
@@ -164,12 +240,12 @@ export default function CallFlowDashboard() {
           <ResponsiveContainer width="100%" height={160}>
             <PieChart>
               <Pie data={sentimentData} cx="50%" cy="50%" innerRadius={45} outerRadius={70} paddingAngle={4} dataKey="value" strokeWidth={0}>
-                {sentimentData.map((entry, i) => <Cell key={i} fill={entry.color} />)}
+                {sentimentData.map((entry: any, i: number) => <Cell key={i} fill={entry.color} />)}
               </Pie>
             </PieChart>
           </ResponsiveContainer>
           <div className="space-y-2 mt-2">
-            {sentimentData.map((s) => (
+            {sentimentData.map((s: any) => (
               <div key={s.name} className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <span className="w-2.5 h-2.5 rounded-full" style={{ background: s.color }} />
@@ -193,8 +269,8 @@ export default function CallFlowDashboard() {
             <YAxis tick={{ fontSize: 10, fill: "#94a3b8" }} axisLine={false} tickLine={false} width={30} />
             <Tooltip contentStyle={{ borderRadius: 12, border: "1px solid #e2e8f0", fontSize: 12 }} />
             <Bar dataKey="calls" name="着信数" radius={[4, 4, 0, 0]}>
-              {hourlyData.map((entry, i) => (
-                <Cell key={i} fill={entry.calls > 5 ? "#3b82f6" : entry.calls > 2 ? "#93c5fd" : "#e0e7ff"} />
+              {hourlyData.map((entry: any, i: number) => (
+                <Cell key={i} fill={(entry as any).calls > 5 ? "#3b82f6" : (entry as any).calls > 2 ? "#93c5fd" : "#e0e7ff"} />
               ))}
             </Bar>
           </BarChart>
@@ -213,7 +289,16 @@ export default function CallFlowDashboard() {
           </button>
         </div>
         <div className="divide-y divide-gray-50">
-          {recentCalls.map((call) => (
+          {loading ? (
+            <div className="flex justify-center py-8">
+              <RefreshCw className="animate-spin text-gray-400" size={24} />
+            </div>
+          ) : recentCalls.length === 0 ? (
+            <div className="text-center py-8 text-gray-500">
+              通話履歴がありません
+            </div>
+          ) : (
+            recentCalls.slice(0, 5).map((call) => (
             <button key={call.id} onClick={() => setSelectedCall(call)} className="w-full text-left px-5 py-3.5 hover:bg-gray-50/50 transition-colors">
               <div className="flex items-start gap-3">
                 <div className="mt-0.5">
@@ -237,11 +322,13 @@ export default function CallFlowDashboard() {
                 <ChevronRight size={16} className="text-gray-300 mt-1 flex-shrink-0" />
               </div>
             </button>
-          ))}
+          ))
+          )}
         </div>
       </div>
     </div>
   );
+  };
 
   // ─── Call Detail Modal ───
   const CallDetailModal = ({ call, onClose }: { call: any; onClose: () => void }) => {
@@ -360,7 +447,17 @@ export default function CallFlowDashboard() {
       </div>
 
       <div className="grid gap-4">
-        {agents.map(agent => (
+        {loading ? (
+          <div className="flex justify-center py-12">
+            <RefreshCw className="animate-spin text-gray-400" size={32} />
+          </div>
+        ) : agents.length === 0 ? (
+          <div className="text-center py-12">
+            <Bot className="mx-auto mb-4 text-gray-300" size={48} />
+            <p className="text-gray-500">エージェントが設定されていません</p>
+          </div>
+        ) : (
+          agents.map(agent => (
           <div key={agent.id} className="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm hover:shadow-md transition-shadow">
             <div className="flex items-start justify-between">
               <div className="flex items-center gap-4">
@@ -411,7 +508,8 @@ export default function CallFlowDashboard() {
               ))}
             </div>
           </div>
-        ))}
+        ))
+        )}
       </div>
     </div>
   );
