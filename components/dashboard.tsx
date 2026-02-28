@@ -434,17 +434,106 @@ export default function CallFlowDashboard() {
   };
 
   // ─── Agents View ───
-  const AgentsView = () => (
+  const AgentsView = () => {
+    const [showCreateModal, setShowCreateModal] = useState(false);
+    const [newAgent, setNewAgent] = useState({ name: '', voice_id: '', language: 'ja' });
+    const [creating, setCreating] = useState(false);
+
+    const handleCreateAgent = async () => {
+      setCreating(true);
+      try {
+        const res = await fetch('/api/agents', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            agent_name: newAgent.name,
+            voice_id: newAgent.voice_id,
+            language: newAgent.language
+          })
+        });
+        if (res.ok) {
+          setShowCreateModal(false);
+          setNewAgent({ name: '', voice_id: '', language: 'ja' });
+          fetchData(); // Refresh data
+        }
+      } catch (error) {
+        console.error('Failed to create agent:', error);
+      } finally {
+        setCreating(false);
+      }
+    };
+
+    return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-xl font-bold text-gray-900">エージェント管理</h2>
           <p className="text-sm text-gray-400 mt-1">AIエージェントの作成・編集・テスト</p>
         </div>
-        <button className="px-4 py-2.5 bg-blue-600 text-white rounded-xl text-sm font-medium shadow-lg shadow-blue-600/20 hover:bg-blue-700 transition-colors flex items-center gap-2">
+        <button 
+          onClick={() => setShowCreateModal(true)}
+          className="px-4 py-2.5 bg-blue-600 text-white rounded-xl text-sm font-medium shadow-lg shadow-blue-600/20 hover:bg-blue-700 transition-colors flex items-center gap-2">
           <Plus size={16} /> 新規エージェント
         </button>
       </div>
+
+      {/* Create Agent Modal */}
+      {showCreateModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-2xl p-6 max-w-md w-full mx-4">
+            <h3 className="text-lg font-bold text-gray-900 mb-4">新規エージェント作成</h3>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">エージェント名</label>
+                <input
+                  type="text"
+                  value={newAgent.name}
+                  onChange={(e) => setNewAgent({...newAgent, name: e.target.value})}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="例: 営業受付AI"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">音声ID</label>
+                <input
+                  type="text"
+                  value={newAgent.voice_id}
+                  onChange={(e) => setNewAgent({...newAgent, voice_id: e.target.value})}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="例: 11labs-Adrian"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">言語</label>
+                <select
+                  value={newAgent.language}
+                  onChange={(e) => setNewAgent({...newAgent, language: e.target.value})}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="ja">日本語</option>
+                  <option value="en">英語</option>
+                  <option value="zh">中国語</option>
+                </select>
+              </div>
+            </div>
+            <div className="flex gap-2 mt-6">
+              <button
+                onClick={handleCreateAgent}
+                disabled={creating || !newAgent.name}
+                className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors disabled:opacity-50"
+              >
+                {creating ? '作成中...' : '作成'}
+              </button>
+              <button
+                onClick={() => setShowCreateModal(false)}
+                className="flex-1 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg font-medium hover:bg-gray-200 transition-colors"
+              >
+                キャンセル
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="grid gap-4">
         {loading ? (
@@ -512,7 +601,8 @@ export default function CallFlowDashboard() {
         )}
       </div>
     </div>
-  );
+    );
+  };
 
   // ─── Calls View ───
   const CallsView = () => {

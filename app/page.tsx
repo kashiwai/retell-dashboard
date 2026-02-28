@@ -1,7 +1,7 @@
 "use client";
 
-import CallFlowDashboard from "@/components/dashboard";
+import InteractiveDashboard from "@/components/dashboard-interactive";
 
 export default function Home() {
-  return <CallFlowDashboard />;
+  return <InteractiveDashboard />;
 }
