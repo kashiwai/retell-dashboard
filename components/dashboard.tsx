@@ -38,20 +38,20 @@ const agents = [
 ];
 
 // ─── Components ───
-const SentimentIcon = ({ sentiment, size = 16 }) => {
+const SentimentIcon = ({ sentiment, size = 16 }: { sentiment: string; size?: number }) => {
   if (sentiment === "positive") return <Smile size={size} className="text-emerald-500" />;
   if (sentiment === "negative") return <Frown size={size} className="text-red-500" />;
   return <Meh size={size} className="text-gray-400" />;
 };
 
-const StatusBadge = ({ status }) => {
-  const styles = {
+const StatusBadge = ({ status }: { status: string }) => {
+  const styles: Record<string, string> = {
     completed: "bg-emerald-500/10 text-emerald-600 border-emerald-500/20",
     transferred: "bg-amber-500/10 text-amber-600 border-amber-500/20",
     failed: "bg-red-500/10 text-red-600 border-red-500/20",
     active: "bg-blue-500/10 text-blue-600 border-blue-500/20",
   };
-  const labels = { completed: "完了", transferred: "転送", failed: "失敗", active: "通話中" };
+  const labels: Record<string, string> = { completed: "完了", transferred: "転送", failed: "失敗", active: "通話中" };
   return (
     <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium border ${styles[status] || styles.completed}`}>
       {labels[status] || status}
@@ -59,14 +59,14 @@ const StatusBadge = ({ status }) => {
   );
 };
 
-const StatCard = ({ icon: Icon, label, value, sub, trend, color = "blue" }) => {
-  const colors = {
+const StatCard = ({ icon: Icon, label, value, sub, trend, color = "blue" }: { icon: any; label: string; value: string; sub?: string; trend?: string; color?: string }) => {
+  const colors: Record<string, string> = {
     blue: "from-blue-500/10 to-blue-600/5 border-blue-500/15",
     emerald: "from-emerald-500/10 to-emerald-600/5 border-emerald-500/15",
     amber: "from-amber-500/10 to-amber-600/5 border-amber-500/15",
     violet: "from-violet-500/10 to-violet-600/5 border-violet-500/15",
   };
-  const iconColors = {
+  const iconColors: Record<string, string> = {
     blue: "text-blue-500", emerald: "text-emerald-500",
     amber: "text-amber-500", violet: "text-violet-500",
   };
@@ -107,8 +107,8 @@ const navItems = [
 export default function CallFlowDashboard() {
   const [activeNav, setActiveNav] = useState("dashboard");
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [selectedCall, setSelectedCall] = useState(null);
-  const [playingAudio, setPlayingAudio] = useState(null);
+  const [selectedCall, setSelectedCall] = useState<any>(null);
+  const [playingAudio, setPlayingAudio] = useState<any>(null);
 
   // ─── Dashboard View ───
   const DashboardView = () => (
@@ -244,7 +244,7 @@ export default function CallFlowDashboard() {
   );
 
   // ─── Call Detail Modal ───
-  const CallDetailModal = ({ call, onClose }) => {
+  const CallDetailModal = ({ call, onClose }: { call: any; onClose: () => void }) => {
     if (!call) return null;
     return (
       <div className="fixed inset-0 z-50 flex items-center justify-center p-4" onClick={onClose}>

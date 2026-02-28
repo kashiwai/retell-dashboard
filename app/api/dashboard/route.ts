@@ -18,6 +18,7 @@ export async function GET() {
     
     // Filter today's calls
     const todayCalls = calls.filter(call => {
+      if (!call.start_timestamp) return false;
       const callDate = new Date(call.start_timestamp);
       return callDate >= today && callDate < tomorrow;
     });
@@ -41,22 +42,25 @@ export async function GET() {
   }
 }
 
-function calculateAvgDuration(calls: any[]) {
+function calculateAvgDuration(calls: any[]): string {
   if (calls.length === 0) return '0:00';
-  const totalMs = calls.reduce((sum, call) => 
-    sum + (call.end_timestamp - call.start_timestamp), 0);
+  const totalMs = calls.reduce((sum, call) => {
+    const start = call.start_timestamp || 0;
+    const end = call.end_timestamp || 0;
+    return sum + (end - start);
+  }, 0);
   const avgMs = totalMs / calls.length;
   return formatDuration(avgMs);
 }
 
-function calculateResolutionRate(calls: any[]) {
+function calculateResolutionRate(calls: any[]): number {
   if (calls.length === 0) return 0;
   const resolved = calls.filter(call => 
     call.call_status === 'ended' && !call.transferred_to).length;
   return Math.round((resolved / calls.length) * 100);
 }
 
-function analyzeSentiment(calls: any[]) {
+function analyzeSentiment(calls: any[]): { positive: number; neutral: number; negative: number } {
   const sentiments = { positive: 0, neutral: 0, negative: 0 };
   calls.forEach(call => {
     const score = call.call_analysis?.sentiment_score || 0;
@@ -73,7 +77,7 @@ function analyzeSentiment(calls: any[]) {
   };
 }
 
-function formatDuration(ms: number) {
+function formatDuration(ms: number): string {
   const seconds = Math.floor(ms / 1000);
   const minutes = Math.floor(seconds / 60);
   const remainingSeconds = seconds % 60;

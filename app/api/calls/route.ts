@@ -12,20 +12,26 @@ export async function GET(request: NextRequest) {
     
     const calls = await retellClient.call.list({ limit });
 
-    const formattedCalls = calls.map(call => ({
-      id: call.call_id,
-      time: formatTime(call.start_timestamp),
-      from: call.from_number || 'Unknown',
-      to: call.to_number,
-      duration: formatDuration(call.end_timestamp - call.start_timestamp),
-      status: mapCallStatus(call.call_status),
-      sentiment: categorizeSentiment(call.call_analysis?.sentiment_score || 0),
-      summary: call.call_analysis?.summary || 'No summary available',
-      purpose: call.call_analysis?.intent || 'General inquiry',
-      transcript: call.transcript,
-      recording_url: call.recording_url,
-      analysis: call.call_analysis
-    }));
+    const formattedCalls = calls.map(call => {
+      // Type-safe property access
+      const phoneCall = call as any;
+      const analysis = call.call_analysis as any;
+      
+      return {
+        id: call.call_id,
+        time: formatTime(call.start_timestamp || Date.now()),
+        from: phoneCall.from_number || phoneCall.from_phone_number || 'Unknown',
+        to: phoneCall.to_number || phoneCall.to_phone_number || 'Unknown',
+        duration: formatDuration((call.end_timestamp || 0) - (call.start_timestamp || 0)),
+        status: mapCallStatus(call.call_status || 'unknown'),
+        sentiment: categorizeSentiment(analysis?.sentiment_score || 0),
+        summary: analysis?.summary || 'No summary available',
+        purpose: analysis?.intent || 'General inquiry',
+        transcript: call.transcript || '',
+        recording_url: call.recording_url || null,
+        analysis: analysis || null
+      };
+    });
 
     return NextResponse.json(formattedCalls);
   } catch (error: any) {
@@ -52,7 +58,7 @@ function formatDuration(ms: number) {
   return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
 }
 
-function mapCallStatus(status: string) {
+function mapCallStatus(status: string): string {
   const statusMap: Record<string, string> = {
     'ended': 'completed',
     'error': 'failed',
