@@ -514,6 +514,203 @@ export default function CallFlowDashboard() {
     </div>
   );
 
+  // ─── Calls View ───
+  const CallsView = () => {
+    const [searchTerm, setSearchTerm] = useState("");
+    const [filterStatus, setFilterStatus] = useState("all");
+    const [dateRange, setDateRange] = useState("today");
+    
+    // Filter calls based on search and filters
+    const filteredCalls = recentCalls.filter(call => {
+      const matchesSearch = searchTerm === "" || 
+        call.from?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        call.summary?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        call.purpose?.toLowerCase().includes(searchTerm.toLowerCase());
+      
+      const matchesStatus = filterStatus === "all" || call.status === filterStatus;
+      
+      return matchesSearch && matchesStatus;
+    });
+    
+    return (
+      <div className="space-y-6">
+        {/* Header with filters */}
+        <div className="flex flex-col lg:flex-row gap-4 justify-between">
+          <div>
+            <h2 className="text-xl font-bold text-gray-900">通話履歴</h2>
+            <p className="text-sm text-gray-400 mt-1">全ての通話記録と詳細情報</p>
+          </div>
+          
+          <div className="flex flex-wrap gap-2">
+            {/* Search */}
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
+              <input
+                type="text"
+                placeholder="検索..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-9 pr-4 py-2 bg-white border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              />
+            </div>
+            
+            {/* Status filter */}
+            <select 
+              value={filterStatus}
+              onChange={(e) => setFilterStatus(e.target.value)}
+              className="px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="all">すべて</option>
+              <option value="completed">完了</option>
+              <option value="transferred">転送</option>
+              <option value="failed">失敗</option>
+            </select>
+            
+            {/* Date range */}
+            <select 
+              value={dateRange}
+              onChange={(e) => setDateRange(e.target.value)}
+              className="px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="today">今日</option>
+              <option value="week">今週</option>
+              <option value="month">今月</option>
+              <option value="all">全期間</option>
+            </select>
+            
+            {/* Export button */}
+            <button className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors">
+              CSVダウンロード
+            </button>
+          </div>
+        </div>
+        
+        {/* Stats cards */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="bg-white rounded-xl border border-gray-100 p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-500">本日の通話</p>
+                <p className="text-2xl font-bold text-gray-900 mt-1">{recentCalls.length}</p>
+              </div>
+              <PhoneIncoming className="text-blue-500" size={24} />
+            </div>
+          </div>
+          
+          <div className="bg-white rounded-xl border border-gray-100 p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-500">完了率</p>
+                <p className="text-2xl font-bold text-gray-900 mt-1">
+                  {Math.round((recentCalls.filter(c => c.status === "completed").length / recentCalls.length) * 100)}%
+                </p>
+              </div>
+              <CheckCircle className="text-emerald-500" size={24} />
+            </div>
+          </div>
+          
+          <div className="bg-white rounded-xl border border-gray-100 p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-500">平均時間</p>
+                <p className="text-2xl font-bold text-gray-900 mt-1">{dashboardStats?.avgDuration || "0:00"}</p>
+              </div>
+              <Clock className="text-amber-500" size={24} />
+            </div>
+          </div>
+          
+          <div className="bg-white rounded-xl border border-gray-100 p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-500">満足度</p>
+                <p className="text-2xl font-bold text-gray-900 mt-1">
+                  {dashboardStats?.sentimentAnalysis?.positive || 0}%
+                </p>
+              </div>
+              <Smile className="text-violet-500" size={24} />
+            </div>
+          </div>
+        </div>
+        
+        {/* Calls table */}
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead className="bg-gray-50 border-b border-gray-100">
+                <tr>
+                  <th className="text-left px-6 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider">時刻</th>
+                  <th className="text-left px-6 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider">発信者</th>
+                  <th className="text-left px-6 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider">用件</th>
+                  <th className="text-left px-6 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider">時間</th>
+                  <th className="text-left px-6 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider">感情</th>
+                  <th className="text-left px-6 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider">状態</th>
+                  <th className="text-left px-6 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider">操作</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-50">
+                {loading ? (
+                  <tr>
+                    <td colSpan={7} className="px-6 py-12 text-center">
+                      <RefreshCw className="animate-spin mx-auto text-gray-400" size={24} />
+                      <p className="text-gray-500 mt-2">読み込み中...</p>
+                    </td>
+                  </tr>
+                ) : filteredCalls.length === 0 ? (
+                  <tr>
+                    <td colSpan={7} className="px-6 py-12 text-center text-gray-500">
+                      通話履歴がありません
+                    </td>
+                  </tr>
+                ) : (
+                  filteredCalls.map((call) => (
+                    <tr key={call.id} className="hover:bg-gray-50/50 transition-colors">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{call.time}</td>
+                      <td className="px-6 py-4">
+                        <div>
+                          <p className="text-sm font-medium text-gray-900">{call.from}</p>
+                          {call.name && <p className="text-xs text-gray-500">{call.name}</p>}
+                        </div>
+                      </td>
+                      <td className="px-6 py-4">
+                        <p className="text-sm text-gray-900">{call.purpose}</p>
+                        <p className="text-xs text-gray-500 mt-1 line-clamp-2">{call.summary}</p>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{call.duration}</td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <SentimentIcon sentiment={call.sentiment} size={20} />
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <StatusBadge status={call.status} />
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="flex items-center gap-2">
+                          <button 
+                            onClick={() => setSelectedCall(call)}
+                            className="text-blue-600 hover:text-blue-700 text-sm font-medium"
+                          >
+                            詳細
+                          </button>
+                          {call.recording_url && (
+                            <button 
+                              onClick={() => setPlayingAudio(playingAudio === call.id ? null : call.id)}
+                              className="text-gray-600 hover:text-gray-700"
+                            >
+                              {playingAudio === call.id ? <Pause size={16} /> : <Play size={16} />}
+                            </button>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    );
+  };
+  
   // ─── Notifications View ───
   const NotificationsView = () => (
     <div className="space-y-6">
@@ -574,7 +771,7 @@ export default function CallFlowDashboard() {
       case "dashboard": return <DashboardView />;
       case "agents": return <AgentsView />;
       case "notifications": return <NotificationsView />;
-      case "calls": return <DashboardView />; // Reuse for demo
+      case "calls": return <CallsView />;
       default: return (
         <div className="flex items-center justify-center h-64 text-gray-400">
           <div className="text-center">
