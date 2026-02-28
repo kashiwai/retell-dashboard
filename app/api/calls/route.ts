@@ -22,9 +22,12 @@ export async function GET(request: NextRequest) {
     const searchParams = request.nextUrl.searchParams;
     const limit = parseInt(searchParams.get('limit') || '10');
     
-    const calls = await retellClient.call.list({ limit });
+    const calls = await retellClient.call.list({ limit: 100 }) as any[];
 
-    const formattedCalls = calls.map(call => {
+    // Limit to the requested number
+    const limitedCalls = calls.slice(0, limit);
+    
+    const formattedCalls = limitedCalls.map(call => {
       // Type-safe property access
       const phoneCall = call as any;
       const analysis = call.call_analysis as any;

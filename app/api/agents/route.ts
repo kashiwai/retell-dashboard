@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { Retell } from 'retell-sdk';
 
 // Force dynamic rendering
@@ -18,13 +18,13 @@ export async function GET() {
     });
 
     // Get agents list
-    const agents = await retellClient.agent.list({ limit: 100 });
+    const agents = await retellClient.agent.list() as any[];
     
     // Get today's calls for each agent
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     
-    const calls = await retellClient.call.list({ limit: 500 });
+    const calls = await retellClient.call.list({ limit: 500 }) as any[];
     
     // Count calls per agent
     const agentCallCounts = new Map<string, number>();
@@ -51,6 +51,84 @@ export async function GET() {
     
   } catch (error: any) {
     console.error('Agents error:', error);
+    return NextResponse.json(
+      { error: error.message },
+      { status: 500 }
+    );
+  }
+}
+
+// POST: Create a new agent
+export async function POST(request: NextRequest) {
+  try {
+    if (!process.env.RETELL_API_KEY) {
+      return NextResponse.json(
+        { error: 'Retell API key not configured' },
+        { status: 500 }
+      );
+    }
+
+    const retellClient = new Retell({ 
+      apiKey: process.env.RETELL_API_KEY 
+    });
+
+    const body = await request.json();
+    const { 
+      agent_name, 
+      voice_id, 
+      language = 'ja',
+      llm_websocket_url,
+      response_engine
+    } = body;
+
+    // Create agent with Japanese defaults
+    const agent = await retellClient.agent.create({
+      agent_name: agent_name || '新規エージェント',
+      voice_id: voice_id || '11labs-Adrian',
+      language: language,
+      llm_websocket_url: llm_websocket_url,
+      
+      // Japanese-specific settings
+      response_engine: response_engine || {
+        type: 'retell_llm',
+        llm_id: body.llm_id || null
+      },
+      
+      // Voice settings optimized for Japanese
+      voice_temperature: 0.7,
+      voice_speed: 1.0,
+      volume: 1.0,
+      
+      // Interaction settings
+      enable_backchannel: true,
+      backchannel_frequency: 0.7,
+      backchannel_words: ['はい', 'ええ', 'そうですね', 'なるほど'],
+      
+      reminder_trigger_ms: 8000,
+      reminder_max_count: 2,
+      
+      interruption_sensitivity: 0.5,
+      ambient_sound_volume: 0.3,
+      
+      // Optional webhook
+      webhook_url: body.webhook_url || null,
+      
+      // Enable call recording
+      enable_recording: true,
+      
+      // Optional custom metadata
+      metadata: body.metadata || {}
+    } as any);
+
+    return NextResponse.json({
+      success: true,
+      agent_id: agent.agent_id,
+      agent_name: agent.agent_name,
+      message: 'エージェントを作成しました'
+    });
+    
+  } catch (error: any) {
+    console.error('Create agent error:', error);
     return NextResponse.json(
       { error: error.message },
       { status: 500 }
