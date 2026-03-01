@@ -3,51 +3,42 @@ import { NextRequest, NextResponse } from 'next/server';
 // Force dynamic rendering
 export const dynamic = 'force-dynamic';
 
-// Disable body parsing to handle raw body
-export const runtime = 'edge';
-
 // Retell Webhook endpoint
 export async function POST(request: NextRequest) {
   try {
-    // Log all headers for debugging
-    const headers: any = {};
-    request.headers.forEach((value, key) => {
-      headers[key] = value;
+    // Log request method and URL for debugging
+    console.log('Webhook request:', {
+      method: request.method,
+      url: request.url,
+      headers: Object.fromEntries(request.headers.entries())
     });
-    console.log('Webhook headers:', headers);
     
-    // Check for API key in header if Retell requires it
-    const apiKey = request.headers.get('x-api-key') || request.headers.get('authorization');
-    if (apiKey) {
-      console.log('API key provided in webhook request');
-    }
+    // Parse the request body
+    let payload: any = {};
     
-    // Get the raw body
-    const rawBody = await request.text();
-    
-    // Handle empty body for test webhooks
-    if (!rawBody) {
-      console.log('Empty webhook body received - likely a test');
+    try {
+      const text = await request.text();
+      if (text) {
+        payload = JSON.parse(text);
+      } else {
+        // Handle empty body for test webhook
+        console.log('Empty webhook body - test request');
+        return NextResponse.json({ 
+          success: true,
+          message: 'Webhook endpoint is active and ready to receive events',
+          status: 'ok'
+        });
+      }
+    } catch (parseError) {
+      console.log('Failed to parse body, treating as test webhook');
       return NextResponse.json({ 
         success: true,
-        message: 'Webhook endpoint active',
-        timestamp: new Date().toISOString()
-      }, { status: 200 });
+        message: 'Webhook endpoint is active',
+        status: 'ok'
+      });
     }
     
-    const payload = JSON.parse(rawBody);
-    console.log('Retell webhook received:', payload);
-    
-    // Optional: Verify webhook signature if secret is configured
-    const webhookSecret = process.env.RETELL_WEBHOOK_SECRET;
-    if (webhookSecret) {
-      const signature = request.headers.get('x-retell-signature');
-      if (!signature) {
-        console.warn('No signature provided in webhook request');
-        // For now, allow the request to proceed
-      }
-      // TODO: Implement signature verification if needed
-    }
+    console.log('Retell webhook payload:', payload);
 
     // Check event type
     const eventType = payload.event || payload.type;
@@ -70,17 +61,31 @@ export async function POST(request: NextRequest) {
       await handleCallAnalyzed(payload);
     }
 
-    return NextResponse.json({ 
+    const response = NextResponse.json({ 
       success: true,
       received: true,
       event: eventType 
     });
+    
+    // Add CORS headers to response
+    response.headers.set('Access-Control-Allow-Origin', '*');
+    response.headers.set('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+    response.headers.set('Access-Control-Allow-Headers', 'Content-Type, Authorization, x-retell-signature, x-api-key');
+    
+    return response;
   } catch (error: any) {
     console.error('Webhook error:', error);
-    return NextResponse.json(
+    const errorResponse = NextResponse.json(
       { error: error.message },
       { status: 500 }
     );
+    
+    // Add CORS headers to error response too
+    errorResponse.headers.set('Access-Control-Allow-Origin', '*');
+    errorResponse.headers.set('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+    errorResponse.headers.set('Access-Control-Allow-Headers', 'Content-Type, Authorization, x-retell-signature, x-api-key');
+    
+    return errorResponse;
   }
 }
 
@@ -570,7 +575,7 @@ function formatAnalyzedMessageRich(call: any): any {
 
 // GET endpoint to check webhook status
 export async function GET() {
-  return NextResponse.json({
+  const response = NextResponse.json({
     status: 'active',
     endpoint: '/api/webhook/retell',
     events: ['call_ended', 'call_analyzed'],
@@ -579,6 +584,24 @@ export async function GET() {
     lineBotInfo: process.env.LINE_CHANNEL_ACCESS_TOKEN ? {
       displayName: 'Call_Sheep01',
       basicId: '@818rmott'
-    } : null
+    } : null,
+    message: 'Webhook endpoint is ready to receive Retell events'
   });
+  
+  // Add CORS headers
+  response.headers.set('Access-Control-Allow-Origin', '*');
+  response.headers.set('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+  response.headers.set('Access-Control-Allow-Headers', 'Content-Type, Authorization, x-retell-signature, x-api-key');
+  
+  return response;
+}
+
+// Handle OPTIONS for CORS preflight
+export async function OPTIONS() {
+  const response = new NextResponse(null, { status: 200 });
+  response.headers.set('Access-Control-Allow-Origin', '*');
+  response.headers.set('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+  response.headers.set('Access-Control-Allow-Headers', 'Content-Type, Authorization, x-retell-signature, x-api-key');
+  response.headers.set('Access-Control-Max-Age', '86400');
+  return response;
 }
