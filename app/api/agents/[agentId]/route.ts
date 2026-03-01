@@ -26,7 +26,7 @@ export async function GET(request: NextRequest, props: Params) {
       apiKey: process.env.RETELL_API_KEY 
     });
 
-    const agent = await retellClient.agent.get(agentId) as any;
+    const agent = await retellClient.agent.retrieve(agentId) as any;
     
     return NextResponse.json({
       agent_id: agent.agent_id,
