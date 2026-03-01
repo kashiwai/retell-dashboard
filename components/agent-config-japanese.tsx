@@ -290,7 +290,8 @@ export default function AgentConfigJapanese({ agentId, onClose, onSave }: AgentC
         }
       } catch (error) {
         console.error('Failed to load agent data:', error);
-        alert(`エージェントデータの読み込みに失敗しました。エラー: ${error.message}`);
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+        alert(`エージェントデータの読み込みに失敗しました。エラー: ${errorMessage}`);
       } finally {
         setLoading(false);
       }
