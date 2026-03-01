@@ -17,6 +17,7 @@ interface AgentConfigProps {
 
 export default function AgentConfigJapanese({ agentId, onClose, onSave }: AgentConfigProps) {
   const [activeSection, setActiveSection] = useState("script");
+  const [loading, setLoading] = useState(true);
   const [config, setConfig] = useState({
     // トークスクリプト
     script: {
@@ -222,6 +223,82 @@ export default function AgentConfigJapanese({ agentId, onClose, onSave }: AgentC
   
   const [isSaving, setIsSaving] = useState(false);
   
+  // Load existing agent data
+  useEffect(() => {
+    const loadAgentData = async () => {
+      if (!agentId) {
+        setLoading(false);
+        return;
+      }
+      
+      try {
+        const res = await fetch(`/api/agents/${agentId}`);
+        if (res.ok) {
+          const agentData = await res.json();
+          
+          // Only update with actual data from API - no defaults
+          setConfig(prevConfig => ({
+            ...prevConfig,
+            general: {
+              ...prevConfig.general,
+              ...(agentData.agent_name && { name: agentData.agent_name }),
+              ...(agentData.voice_id && { voice_id: agentData.voice_id }),
+              ...(agentData.language && { language: agentData.language }),
+              ...(agentData.voice_speed !== undefined && { voice_speed: agentData.voice_speed }),
+              ...(agentData.voice_temperature !== undefined && { 
+                voice_pitch: agentData.voice_temperature,
+                voice_temperature: agentData.voice_temperature 
+              })
+            },
+            ...(agentData.script && { script: agentData.script }),
+            conversation: {
+              ...prevConfig.conversation,
+              ...(agentData.interruption_sensitivity !== undefined && { 
+                interruption_sensitivity: agentData.interruption_sensitivity 
+              }),
+              ...(agentData.enable_backchannel !== undefined && { 
+                enable_backchanneling: agentData.enable_backchannel 
+              }),
+              ...(agentData.backchannel_frequency !== undefined && { 
+                backchannel_frequency: agentData.backchannel_frequency 
+              }),
+              ...(agentData.backchannel_words?.length > 0 && { 
+                backchannel_words: agentData.backchannel_words 
+              }),
+              ...(agentData.reminder_trigger_ms !== undefined && { 
+                reminder_enabled: agentData.reminder_trigger_ms > 0,
+                reminder_interval: agentData.reminder_trigger_ms / 1000
+              }),
+              ...(agentData.reminder_max_count !== undefined && { 
+                reminder_max_count: agentData.reminder_max_count 
+              })
+            },
+            notifications: {
+              ...prevConfig.notifications,
+              ...(agentData.webhook_url && { 
+                webhook_enabled: true,
+                webhook_url: agentData.webhook_url 
+              })
+            },
+            ...(agentData.settings && agentData.settings)
+          }));
+        } else {
+          // Show error code only
+          const errorData = await res.json().catch(() => ({}));
+          console.error(`Error loading agent: ${res.status}`, errorData);
+          alert(`エージェントデータの読み込みに失敗しました。エラーコード: ${res.status}`);
+        }
+      } catch (error) {
+        console.error('Failed to load agent data:', error);
+        alert(`エージェントデータの読み込みに失敗しました。エラー: ${error.message}`);
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    loadAgentData();
+  }, [agentId]);
+  
   const sections = [
     { id: "script", label: "トークスクリプト", icon: FileText, color: "purple" },
     { id: "general", label: "基本設定", icon: Settings, color: "blue" },
@@ -302,6 +379,14 @@ export default function AgentConfigJapanese({ agentId, onClose, onSave }: AgentC
         
         {/* メインコンテンツ */}
         <div className="flex-1 overflow-y-auto">
+          {loading ? (
+            <div className="flex items-center justify-center h-full">
+              <div className="text-center">
+                <div className="w-16 h-16 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+                <p className="text-gray-600">エージェント情報を読み込んでいます...</p>
+              </div>
+            </div>
+          ) : (
           <div className="p-8">
             {/* トークスクリプト */}
             {activeSection === "script" && (
@@ -1955,6 +2040,7 @@ export default function AgentConfigJapanese({ agentId, onClose, onSave }: AgentC
               </div>
             )}
           </div>
+          )}
           
           {/* 保存ボタン */}
           <div className="sticky bottom-0 bg-white border-t px-8 py-4">

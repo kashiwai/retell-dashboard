@@ -24,6 +24,11 @@ export default function CallDetailModal({ call, onClose }: CallDetailModalProps)
   const [playbackSpeed, setPlaybackSpeed] = useState(1);
   const [copied, setCopied] = useState<string | null>(null);
   const [showWaveform, setShowWaveform] = useState(true);
+  const [localIssueType, setLocalIssueType] = useState(call?.issue_type || {
+    category: "技術サポート",
+    subCategory: "",
+    priority: "normal"
+  });
   const audioRef = useRef<HTMLAudioElement>(null);
   const progressRef = useRef<HTMLDivElement>(null);
 
@@ -132,17 +137,17 @@ export default function CallDetailModal({ call, onClose }: CallDetailModalProps)
     setTimeout(() => setCopied(null), 2000);
   };
 
-  // Mock data (実際のAPIからのデータに置き換え)
+  // Use actual call data
   const callDetails = {
-    id: call?.call_id || "CALL-20240320-001",
-    direction: call?.direction || "inbound",
-    status: call?.call_status || "completed",
-    from: call?.from_number || "+81 90-1234-5678",
-    to: call?.to_number || "+81 50-1808-0215",
-    agent: call?.agent_name || "カスタマーサポートAI",
+    id: call?.call_id || call?.id || "CALL-20240320-001",
+    direction: call?.direction || call?.metadata?.call_type || "inbound",
+    status: call?.call_status || call?.status || "completed",
+    from: call?.from_number || call?.from || "+81 90-1234-5678",
+    to: call?.to_number || call?.to || "+81 50-1808-0215",
+    agent: call?.metadata?.agent_name || call?.agent_name || "カスタマーサポートAI",
     startTime: call?.start_timestamp || new Date().toISOString(),
-    endTime: call?.end_timestamp || new Date(Date.now() + 300000).toISOString(),
-    duration: call?.duration || 300,
+    endTime: call?.end_timestamp || new Date(Date.now() + (call?.duration_ms || 300000)).toISOString(),
+    duration: call?.duration_ms ? call.duration_ms / 1000 : 300,
     recordingUrl: call?.recording_url || null,
     transcript: call?.transcript || `[00:00] AI: お電話ありがとうございます。〇〇会社の受付AIです。本日はどのようなご用件でしょうか？
 
@@ -169,15 +174,16 @@ export default function CallDetailModal({ call, onClose }: CallDetailModalProps)
 [01:42] お客様: 本当に助かりました。ありがとうございました。
 
 [01:47] AI: こちらこそ、お電話ありがとうございました。良い一日をお過ごしください。失礼いたします。`,
-    summary: call?.call_summary || "製品の不具合に関する問い合わせ。リセットボタンの操作で解決。",
+    summary: call?.summary || call?.call_summary || "製品の不具合に関する問い合わせ。リセットボタンの操作で解決。",
     sentiment: call?.sentiment || "positive",
     satisfaction: call?.satisfaction_score || 95,
     tags: call?.tags || ["製品サポート", "技術的問題", "解決済み"],
     actionItems: call?.action_items || [],
+    issueType: localIssueType,
     metadata: call?.metadata || {
-      product: "ABC-1000",
-      issueType: "電源不具合",
-      resolution: "リセットで解決"
+      agent_id: call?.agent_id,
+      call_type: call?.call_type || "inbound",
+      disconnection_reason: call?.disconnection_reason
     }
   };
 
@@ -190,6 +196,27 @@ export default function CallDetailModal({ call, onClose }: CallDetailModalProps)
   const sentimentIcon = sentimentMap[callDetails.sentiment as keyof typeof sentimentMap] || sentimentMap.neutral;
 
   const SentimentIcon = sentimentIcon.icon;
+
+  // Handle issue type changes
+  const handleIssueTypeChange = (field: string, value: string) => {
+    setLocalIssueType(prev => ({
+      ...prev,
+      [field]: value
+    }));
+  };
+
+  // Save issue type
+  const saveIssueType = async () => {
+    try {
+      // TODO: API call to save issue type
+      console.log('Saving issue type:', localIssueType);
+      // Show success message
+      alert('課題タイプを保存しました');
+    } catch (error) {
+      console.error('Failed to save issue type:', error);
+      alert('保存に失敗しました');
+    }
+  };
 
   return (
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
@@ -586,10 +613,81 @@ export default function CallDetailModal({ call, onClose }: CallDetailModalProps)
                 </div>
               </div>
 
+              {/* 課題タイプ */}
+              <div className="bg-white rounded-xl border-2 border-gray-100 p-6">
+                <h3 className="text-lg font-bold text-gray-900 mb-4">課題タイプ</h3>
+                <div className="space-y-4">
+                  {/* カテゴリー選択 */}
+                  <div>
+                    <label className="text-sm text-gray-600 mb-2 block">カテゴリー</label>
+                    <select 
+                      value={callDetails.issueType?.category || '技術サポート'}
+                      onChange={(e) => handleIssueTypeChange('category', e.target.value)}
+                      className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    >
+                      <option value="技術サポート">技術サポート</option>
+                      <option value="注文・予約">注文・予約</option>
+                      <option value="変更・キャンセル">変更・キャンセル</option>
+                      <option value="料金・支払い">料金・支払い</option>
+                      <option value="配送・納期">配送・納期</option>
+                      <option value="製品情報">製品情報</option>
+                      <option value="アカウント">アカウント</option>
+                      <option value="その他">その他</option>
+                    </select>
+                  </div>
+                  
+                  {/* サブカテゴリー入力 */}
+                  <div>
+                    <label className="text-sm text-gray-600 mb-2 block">詳細</label>
+                    <input 
+                      type="text"
+                      value={callDetails.issueType?.subCategory || ''}
+                      onChange={(e) => handleIssueTypeChange('subCategory', e.target.value)}
+                      placeholder="詳細を入力"
+                      className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+                  
+                  {/* 優先度選択 */}
+                  <div>
+                    <label className="text-sm text-gray-600 mb-2 block">優先度</label>
+                    <div className="flex gap-2">
+                      {['low', 'normal', 'high', 'urgent'].map(priority => (
+                        <button
+                          key={priority}
+                          onClick={() => handleIssueTypeChange('priority', priority)}
+                          className={`px-4 py-2 rounded-lg font-medium transition-all ${
+                            callDetails.issueType?.priority === priority
+                              ? priority === 'urgent' ? 'bg-red-600 text-white' :
+                                priority === 'high' ? 'bg-orange-600 text-white' :
+                                priority === 'normal' ? 'bg-blue-600 text-white' :
+                                'bg-gray-600 text-white'
+                              : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                          }`}
+                        >
+                          {priority === 'urgent' && '緊急'}
+                          {priority === 'high' && '高'}
+                          {priority === 'normal' && '通常'}
+                          {priority === 'low' && '低'}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  
+                  {/* 保存ボタン */}
+                  <button 
+                    onClick={saveIssueType}
+                    className="w-full mt-4 px-4 py-2 bg-gradient-to-r from-blue-600 to-green-600 text-white rounded-lg font-medium hover:from-blue-700 hover:to-green-700 transition-all"
+                  >
+                    課題タイプを保存
+                  </button>
+                </div>
+              </div>
+
               {/* メタデータ */}
               {Object.keys(callDetails.metadata).length > 0 && (
                 <div className="bg-white rounded-xl border-2 border-gray-100 p-6">
-                  <h3 className="text-lg font-bold text-gray-900 mb-4">追加情報</h3>
+                  <h3 className="text-lg font-bold text-gray-900 mb-4">その他の情報</h3>
                   <div className="space-y-3">
                     {Object.entries(callDetails.metadata).map(([key, value]) => (
                       <div key={key} className="flex items-center justify-between py-2 border-b border-gray-100 last:border-0">
