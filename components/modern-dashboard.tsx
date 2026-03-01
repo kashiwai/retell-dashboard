@@ -192,19 +192,19 @@ export default function ModernDashboard() {
   const handleSaveNotificationConfig = async (type: string) => {
     setSavingConfig(true);
     try {
-      const config = type === "Slack" 
-        ? { webhook_url: slackWebhook }
-        : { access_token: lineToken };
-      const res = await fetch("/api/websocket", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ type: type.toLowerCase(), config })
-      });
-      if (res.ok) {
-        setShowNotificationConfig(null);
+      // Save configuration to localStorage
+      if (type === "LINE") {
+        localStorage.setItem('line_notify_token', lineToken);
+        alert('LINE通知設定を保存しました\n\nテスト通知を送信するには、通話履歴から任意の通話を選択してください。');
+      } else if (type === "Slack") {
+        localStorage.setItem('slack_webhook', slackWebhook);
+        alert('Slack通知設定を保存しました');
       }
+      
+      setShowNotificationConfig(null);
     } catch (error) {
       console.error("Failed to save config:", error);
+      alert('設定の保存に失敗しました');
     } finally {
       setSavingConfig(false);
     }
@@ -690,12 +690,56 @@ export default function ModernDashboard() {
                   <p className="text-sm text-gray-600 mb-4">
                     重要な通話をLINEでリアルタイム通知
                   </p>
-                  <button
-                    onClick={() => setShowNotificationConfig("LINE")}
-                    className="w-full px-4 py-2 bg-green-50 text-green-600 rounded-lg hover:bg-green-100 transition-colors font-medium"
-                  >
-                    {lineToken ? "設定変更" : "接続する"}
-                  </button>
+                  <div className="space-y-2">
+                    <button
+                      onClick={() => setShowNotificationConfig("LINE")}
+                      className="w-full px-4 py-2 bg-green-50 text-green-600 rounded-lg hover:bg-green-100 transition-colors font-medium"
+                    >
+                      {lineToken ? "設定変更" : "接続する"}
+                    </button>
+                    {lineToken && (
+                      <button
+                        onClick={async () => {
+                          const token = localStorage.getItem('line_notify_token');
+                          if (!token) {
+                            alert('LINE Notifyトークンが設定されていません');
+                            return;
+                          }
+                          
+                          try {
+                            const res = await fetch('/api/notify/line', {
+                              method: 'POST',
+                              headers: { 'Content-Type': 'application/json' },
+                              body: JSON.stringify({
+                                token,
+                                call: {
+                                  from: 'テスト発信者',
+                                  duration: '1:23',
+                                  summary: 'これはテスト通知です',
+                                  urgency: '低',
+                                  sentiment: 'positive',
+                                  start_timestamp: Date.now()
+                                }
+                              })
+                            });
+                            
+                            if (res.ok) {
+                              alert('テスト通知を送信しました。LINEをご確認ください。');
+                            } else {
+                              alert('通知の送信に失敗しました');
+                            }
+                          } catch (error) {
+                            console.error('Test notification error:', error);
+                            alert('通知の送信に失敗しました');
+                          }
+                        }}
+                        className="w-full px-4 py-2 bg-green-100 text-green-700 rounded-lg hover:bg-green-200 transition-colors font-medium flex items-center justify-center gap-2"
+                      >
+                        <Send size={16} />
+                        テスト通知を送信
+                      </button>
+                    )}
+                  </div>
                 </div>
               </div>
             </div>
