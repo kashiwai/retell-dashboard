@@ -153,7 +153,7 @@ export async function GET(request: NextRequest) {
         call_status: call.call_status,
         sentiment: sentiment,
         satisfaction_score: satisfactionScore,
-        summary: summary,
+        summary: summary || '分析中...',
         custom_analysis: customAnalysis,
         purpose: analysis?.intent || issueType.category || 'お問い合わせ',
         transcript: transcript,
@@ -166,7 +166,7 @@ export async function GET(request: NextRequest) {
         // 詳細情報を追加
         customer_name: customAnalysis?.customer_name || detailedInfo?.customer_name || '不明',
         phone_number: customAnalysis?.phone_number || detailedInfo?.phone_number || '',
-        requirement: customAnalysis?.requirement || detailedInfo?.requirement || summary,
+        requirement: customAnalysis?.requirement || detailedInfo?.requirement || summary || '分析中...',
         details: customAnalysis?.details || detailedInfo?.details || '',
         urgency: customAnalysis?.urgency || detailedInfo?.urgency || '中',
         response_status: customAnalysis?.status || detailedInfo?.status || '未対応',

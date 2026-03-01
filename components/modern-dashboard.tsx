@@ -70,7 +70,11 @@ export default function ModernDashboard() {
       ]);
       
       if (agentsRes.ok) setAgents(await agentsRes.json());
-      if (callsRes.ok) setCalls(await callsRes.json());
+      if (callsRes.ok) {
+        const callData = await callsRes.json();
+        console.log('Fetched calls data:', callData);
+        setCalls(callData);
+      }
       if (numbersRes.ok) setPhoneNumbers(await numbersRes.json());
       if (statsRes.ok) {
         const data = await statsRes.json();
@@ -514,7 +518,9 @@ export default function ModernDashboard() {
                         <td className="px-4 py-3 text-sm text-gray-900">{call.time}</td>
                         <td className="px-4 py-3 text-sm font-medium text-gray-900">{call.customer_name || "不明"}</td>
                         <td className="px-4 py-3 text-sm text-gray-600">{call.phone_number || call.from || "-"}</td>
-                        <td className="px-4 py-3 text-sm text-gray-700 max-w-xs truncate">{call.requirement || call.summary || "-"}</td>
+                        <td className="px-4 py-3 text-sm text-gray-700 max-w-xs truncate">
+                          {call.requirement || call.summary || "分析中..."}
+                        </td>
                         <td className="px-4 py-3">
                           <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold ${
                             call.urgency === "高" ? "bg-red-100 text-red-700" :
