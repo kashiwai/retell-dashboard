@@ -2,7 +2,13 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
 // 認証が不要なパス
-const PUBLIC_PATHS = ['/login', '/api/auth/login'];
+const PUBLIC_PATHS = [
+  '/login', 
+  '/api/auth/login',
+  '/api/webhook/retell',  // Retell webhook
+  '/api/line/webhook',     // LINE webhook
+  '/api/notify/line'       // LINE notify
+];
 
 // 内部APIコールは認証不要
 const INTERNAL_API_PATHS = ['/api/summarize'];
