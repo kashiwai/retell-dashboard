@@ -39,8 +39,8 @@ export async function GET(request: NextRequest) {
       let summary = analysis?.summary;
       let sentiment = analysis?.sentiment_score ? categorizeSentiment(analysis.sentiment_score) : 'neutral';
       let satisfactionScore = 70;
-      let tags = [];
-      let actionItems = [];
+      let tags: string[] = [];
+      let actionItems: string[] = [];
       
       if (transcript && !summary) {
         try {

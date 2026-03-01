@@ -165,7 +165,7 @@ function generateFallbackSummary(transcript: string, type: string): any {
       };
 
     case 'tags':
-      const tags = [];
+      const tags: string[] = [];
       
       // Service type tags
       if (transcript.includes('製品') || transcript.includes('商品')) tags.push('製品サポート');
@@ -184,7 +184,7 @@ function generateFallbackSummary(transcript: string, type: string): any {
       return { tags };
 
     case 'action_items':
-      const actionItems = [];
+      const actionItems: string[] = [];
       const actionKeywords = ['確認します', '送ります', '連絡します', '手配します', '対応します'];
       
       lines.forEach(line => {
