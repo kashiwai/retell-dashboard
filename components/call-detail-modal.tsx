@@ -6,7 +6,7 @@ import {
   Calendar, MapPin, MessageSquare, FileText, Mic, SkipBack,
   SkipForward, Volume, VolumeX, Copy, Check, Star, AlertCircle,
   TrendingUp, TrendingDown, Minus, Share2, ExternalLink, ChevronRight,
-  PhoneIncoming, PhoneOutgoing, Timer, Activity, Bot, Hash
+  PhoneIncoming, PhoneOutgoing, Timer, Activity, Bot, Hash, Sparkles
 } from "lucide-react";
 
 interface CallDetailModalProps {
@@ -29,6 +29,7 @@ export default function CallDetailModal({ call, onClose }: CallDetailModalProps)
     subCategory: "",
     priority: "normal"
   });
+  const [isSummarizing, setIsSummarizing] = useState(false);
   const audioRef = useRef<HTMLAudioElement>(null);
   const progressRef = useRef<HTMLDivElement>(null);
 
@@ -216,6 +217,41 @@ export default function CallDetailModal({ call, onClose }: CallDetailModalProps)
     } catch (error) {
       console.error('Failed to save issue type:', error);
       alert('保存に失敗しました');
+    }
+  };
+
+  // Summarize call
+  const summarizeCall = async () => {
+    if (!call?.call_id || !call?.transcript) {
+      alert('通話記録がありません');
+      return;
+    }
+
+    setIsSummarizing(true);
+    try {
+      const response = await fetch(`/api/calls/${call.call_id}/summarize`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' }
+      });
+
+      if (!response.ok) {
+        throw new Error('要約に失敗しました');
+      }
+
+      const data = await response.json();
+      
+      // Update the call object with new summary data
+      if (onClose) {
+        // Refresh the parent component to show updated data
+        window.location.reload();
+      }
+      
+      alert('GPT要約が完了しました。情報が更新されました。');
+    } catch (error) {
+      console.error('Summarization error:', error);
+      alert('要約に失敗しました');
+    } finally {
+      setIsSummarizing(false);
     }
   };
 
@@ -522,6 +558,32 @@ export default function CallDetailModal({ call, onClose }: CallDetailModalProps)
           {/* Summary Tab */}
           {activeTab === "summary" && (
             <div className="space-y-6">
+              {/* GPT要約ボタン */}
+              {(!call?.customer_name || call?.customer_name === '不明') && call?.transcript && (
+                <div className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-xl border-2 border-blue-200 p-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h3 className="text-lg font-bold text-gray-900 mb-2">GPT要約機能</h3>
+                      <p className="text-sm text-gray-600">
+                        この通話をGPTで詳細分析し、お客様名、電話番号、要件、緊急度などを自動抽出します
+                      </p>
+                    </div>
+                    <button
+                      onClick={summarizeCall}
+                      disabled={isSummarizing}
+                      className={`flex items-center gap-2 px-6 py-3 rounded-lg font-medium transition-all ${
+                        isSummarizing 
+                          ? 'bg-gray-300 text-gray-500 cursor-not-allowed' 
+                          : 'bg-gradient-to-r from-blue-600 to-purple-600 text-white hover:from-blue-700 hover:to-purple-700 shadow-lg hover:shadow-xl'
+                      }`}
+                    >
+                      <Sparkles size={20} />
+                      {isSummarizing ? '分析中...' : 'GPTで要約する'}
+                    </button>
+                  </div>
+                </div>
+              )}
+
               {/* 要約 */}
               <div className="bg-white rounded-xl border-2 border-gray-100 p-6">
                 <h3 className="text-lg font-bold text-gray-900 mb-4">通話の要約</h3>
