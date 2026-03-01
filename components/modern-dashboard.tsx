@@ -90,7 +90,8 @@ export default function ModernDashboard() {
   
   useEffect(() => {
     fetchData();
-    const interval = setInterval(fetchData, 30000);
+    // 更新間隔を短くして、より頻繁にデータを取得
+    const interval = setInterval(fetchData, 5000); // 5秒ごとに更新
     return () => clearInterval(interval);
   }, []);
   

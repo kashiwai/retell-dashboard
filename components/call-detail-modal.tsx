@@ -30,6 +30,7 @@ export default function CallDetailModal({ call, onClose }: CallDetailModalProps)
     priority: "normal"
   });
   const [isSummarizing, setIsSummarizing] = useState(false);
+  const [callData, setCallData] = useState(call);
   const [summaryData, setSummaryData] = useState({
     customer_name: call?.customer_name || '不明',
     phone_number: call?.phone_number || '',
@@ -45,6 +46,44 @@ export default function CallDetailModal({ call, onClose }: CallDetailModalProps)
   });
   const audioRef = useRef<HTMLAudioElement>(null);
   const progressRef = useRef<HTMLDivElement>(null);
+  
+  // 最新のデータを取得する関数
+  const fetchLatestCallData = async () => {
+    try {
+      console.log('Fetching latest data for call:', call.call_id);
+      const response = await fetch(`/api/calls/${call.call_id}`);
+      if (response.ok) {
+        const latestData = await response.json();
+        console.log('Latest call data:', latestData);
+        
+        // callDataを更新
+        setCallData(latestData);
+        
+        // 要約データも更新
+        if (latestData.call_analysis) {
+          setSummaryData(prev => ({
+            ...prev,
+            summary: latestData.call_analysis.summary || prev.summary,
+            customer_name: latestData.call_analysis.custom_analysis?.customer_name || prev.customer_name,
+            phone_number: latestData.call_analysis.custom_analysis?.phone_number || prev.phone_number,
+            requirement: latestData.call_analysis.custom_analysis?.requirement || prev.requirement,
+            urgency: latestData.call_analysis.custom_analysis?.urgency || prev.urgency,
+            sentiment: latestData.call_analysis.sentiment || prev.sentiment
+          }));
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching latest call data:', error);
+    }
+  };
+  
+  // コンポーネントマウント時と定期的に最新データを取得
+  useEffect(() => {
+    fetchLatestCallData();
+    // 3秒ごとに最新データを取得
+    const interval = setInterval(fetchLatestCallData, 3000);
+    return () => clearInterval(interval);
+  }, [call.call_id]);
 
   // Format time display
   const formatTime = (seconds: number) => {
@@ -559,7 +598,7 @@ export default function CallDetailModal({ call, onClose }: CallDetailModalProps)
               <div className="bg-gray-50 rounded-xl p-6 space-y-4">
                 {(() => {
                   // Try to parse transcript_formatted or use regular transcript
-                  const transcriptText = call?.transcript_formatted || callDetails.transcript;
+                  const transcriptText = callData?.transcript_formatted || callData?.transcript || call?.transcript_formatted || callDetails.transcript;
                   const lines = transcriptText.split('\n').filter((line: string) => line.trim());
                   
                   return lines.map((line: string, i: number) => {
