@@ -6,7 +6,7 @@ import {
   Calendar, MapPin, MessageSquare, FileText, Mic, SkipBack,
   SkipForward, Volume, VolumeX, Copy, Check, Star, AlertCircle,
   TrendingUp, TrendingDown, Minus, Share2, ExternalLink, ChevronRight,
-  PhoneIncoming, PhoneOutgoing, Timer, Activity, Bot, Hash, Sparkles
+  PhoneIncoming, PhoneOutgoing, Timer, Activity, Bot, Hash, Sparkles, Send
 } from "lucide-react";
 
 interface CallDetailModalProps {
@@ -30,6 +30,7 @@ export default function CallDetailModal({ call, onClose }: CallDetailModalProps)
     priority: "normal"
   });
   const [isSummarizing, setIsSummarizing] = useState(false);
+  const [isSendingToLine, setIsSendingToLine] = useState(false);
   const [callData, setCallData] = useState(call);
   const [summaryData, setSummaryData] = useState({
     customer_name: call?.customer_name || '不明',
@@ -269,6 +270,50 @@ export default function CallDetailModal({ call, onClose }: CallDetailModalProps)
     } catch (error) {
       console.error('Failed to save issue type:', error);
       alert('保存に失敗しました');
+    }
+  };
+
+  // Send to LINE
+  const sendToLine = async () => {
+    if (!callData && !call) {
+      alert('通話データがありません');
+      return;
+    }
+
+    setIsSendingToLine(true);
+    try {
+      const response = await fetch('/api/notify/line/manual', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          call_id: callData?.call_id || call?.call_id,
+          summary: callData?.call_analysis?.summary || call?.call_analysis?.summary || summaryData.summary || callDetails.summary,
+          customer_name: summaryData.customer_name,
+          phone_number: summaryData.phone_number,
+          requirement: summaryData.requirement,
+          urgency: summaryData.urgency,
+          sentiment: callDetails.sentiment,
+          satisfaction_score: callDetails.satisfaction,
+          tags: callDetails.tags,
+          action_items: callDetails.actionItems,
+          start_timestamp: callDetails.startTime,
+          end_timestamp: callDetails.endTime,
+          duration: callDetails.duration,
+          from_number: callDetails.from,
+          to_number: callDetails.to
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error('LINE送信に失敗しました');
+      }
+
+      alert('LINEに要約を送信しました！');
+    } catch (error) {
+      console.error('LINE送信エラー:', error);
+      alert('LINE送信に失敗しました');
+    } finally {
+      setIsSendingToLine(false);
     }
   };
 
@@ -660,16 +705,26 @@ export default function CallDetailModal({ call, onClose }: CallDetailModalProps)
               <div className="bg-white rounded-xl border-2 border-gray-100 p-6">
                 <div className="flex justify-between items-center mb-4">
                   <h3 className="text-lg font-bold text-gray-900">通話の要約</h3>
-                  {call?.transcript && (!callData?.call_analysis?.summary && !call?.call_analysis?.summary) && (
+                  <div className="flex gap-2">
+                    {call?.transcript && (!callData?.call_analysis?.summary && !call?.call_analysis?.summary) && (
+                      <button
+                        onClick={summarizeCall}
+                        disabled={isSummarizing}
+                        className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-lg hover:from-purple-700 hover:to-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                      >
+                        <Sparkles size={16} />
+                        {isSummarizing ? '要約生成中...' : 'GPT要約を生成'}
+                      </button>
+                    )}
                     <button
-                      onClick={summarizeCall}
-                      disabled={isSummarizing}
-                      className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-lg hover:from-purple-700 hover:to-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                      onClick={sendToLine}
+                      disabled={isSendingToLine || !callDetails.summary}
+                      className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-lg hover:from-green-700 hover:to-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
                     >
-                      <Sparkles size={16} />
-                      {isSummarizing ? '要約生成中...' : 'GPT要約を生成'}
+                      <Send size={16} />
+                      {isSendingToLine ? 'LINE送信中...' : 'LINEに送信'}
                     </button>
-                  )}
+                  </div>
                 </div>
                 <p className="text-gray-700">
                   {callData?.call_analysis?.summary || call?.call_analysis?.summary || callDetails.summary || summaryData.summary || '要約データがありません。GPT要約ボタンをクリックして生成してください。'}

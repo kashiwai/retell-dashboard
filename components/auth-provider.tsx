@@ -35,6 +35,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
 
+  // 初回マウント時のみ認証チェック
   useEffect(() => {
     // クライアントサイドでのみ実行
     if (typeof window === 'undefined') {
@@ -68,13 +69,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
     }
 
-    // 認証情報がない場合、ログインページ以外ならリダイレクト
-    if (pathname !== '/login') {
+    setIsLoading(false);
+  }, []); // 初回マウント時のみ実行
+  
+  // 認証されていない場合のリダイレクト処理
+  useEffect(() => {
+    if (!isLoading && !token && pathname !== '/login') {
       router.push('/login');
     }
-
-    setIsLoading(false);
-  }, [pathname, router]); // pathnameとrouterの変更を監視
+  }, [isLoading, token, pathname, router]);
 
   const login = (newToken: string, newUser: User) => {
     setToken(newToken);

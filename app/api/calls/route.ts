@@ -43,7 +43,7 @@ export async function GET(request: NextRequest) {
         custom_analysis: call.call_analysis?.custom_analysis
       });
       
-      // Use Retell API's summary and custom_analysis directly
+      // Use Retell API's summary and custom_analysis directly - THIS IS PRIORITY 1
       let summary = call.call_analysis?.summary || '';
       let customAnalysis = call.call_analysis?.custom_analysis || {};
       let sentiment = analysis?.sentiment_score ? categorizeSentiment(analysis.sentiment_score) : 'neutral';
@@ -52,8 +52,8 @@ export async function GET(request: NextRequest) {
       let actionItems: string[] = [];
       let detailedInfo = null;
       
-      // Always try to get detailed info if transcript exists
-      if (transcript) {
+      // Only try GPT if Retell doesn't have summary AND transcript exists
+      if (!summary && transcript) {
         try {
           // Call GPT API for detailed analysis
           const detailedRes = await fetch(`${request.nextUrl.origin}/api/summarize`, {
@@ -64,10 +64,8 @@ export async function GET(request: NextRequest) {
           
           if (detailedRes.ok) {
             detailedInfo = await detailedRes.json();
-            // Use GPT summary if available, otherwise keep existing
-            if (!summary || detailedInfo.requirement) {
-              summary = detailedInfo.summary || detailedInfo.requirement;
-            }
+            // Only use GPT summary if Retell doesn't have one
+            summary = detailedInfo.summary || detailedInfo.requirement;
           }
           
           // Get sentiment analysis
@@ -153,7 +151,7 @@ export async function GET(request: NextRequest) {
         call_status: call.call_status,
         sentiment: sentiment,
         satisfaction_score: satisfactionScore,
-        summary: summary || '分析中...',
+        summary: summary || '',
         custom_analysis: customAnalysis,
         purpose: analysis?.intent || issueType.category || 'お問い合わせ',
         transcript: transcript,
@@ -166,7 +164,7 @@ export async function GET(request: NextRequest) {
         // 詳細情報を追加
         customer_name: customAnalysis?.customer_name || detailedInfo?.customer_name || '不明',
         phone_number: customAnalysis?.phone_number || detailedInfo?.phone_number || '',
-        requirement: customAnalysis?.requirement || detailedInfo?.requirement || summary || '分析中...',
+        requirement: customAnalysis?.requirement || detailedInfo?.requirement || summary || '',
         details: customAnalysis?.details || detailedInfo?.details || '',
         urgency: customAnalysis?.urgency || detailedInfo?.urgency || '中',
         response_status: customAnalysis?.status || detailedInfo?.status || '未対応',

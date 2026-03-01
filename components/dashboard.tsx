@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { LineChart, Line, AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
 import { Phone, PhoneIncoming, PhoneOutgoing, PhoneMissed, Clock, TrendingUp, Users, Settings, Bell, ChevronRight, Play, Pause, Search, Filter, MoreHorizontal, CheckCircle, AlertCircle, Smile, Frown, Meh, Volume2, MessageSquare, Bot, Hash, BarChart3, Zap, Moon, Sun, Menu, X, ExternalLink, Plus, Mic, RefreshCw } from "lucide-react";
+import CallDetailModal from './call-detail-modal';
 
 // ─── Components ───
 const SentimentIcon = ({ sentiment, size = 16 }: { sentiment: string; size?: number }) => {
@@ -331,107 +332,6 @@ export default function CallFlowDashboard() {
   };
 
   // ─── Call Detail Modal ───
-  const CallDetailModal = ({ call, onClose }: { call: any; onClose: () => void }) => {
-    if (!call) return null;
-    return (
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-4" onClick={onClose}>
-        <div className="absolute inset-0 bg-black/30 backdrop-blur-sm" />
-        <div className="relative bg-white rounded-3xl shadow-2xl max-w-lg w-full max-h-[85vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
-          <div className="p-6">
-            {/* Header */}
-            <div className="flex items-start justify-between mb-5">
-              <div>
-                <div className="flex items-center gap-2">
-                  <SentimentIcon sentiment={call.sentiment} size={20} />
-                  <h2 className="text-xl font-bold text-gray-900">{call.name}</h2>
-                </div>
-                <p className="text-sm text-gray-400 mt-1">{call.from} • {call.time} • {call.duration}</p>
-              </div>
-              <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-xl transition-colors">
-                <X size={20} className="text-gray-400" />
-              </button>
-            </div>
-
-            {/* Status */}
-            <div className="flex gap-2 mb-5">
-              <StatusBadge status={call.status} />
-              <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-600 border border-gray-200">{call.purpose}</span>
-            </div>
-
-            {/* Recording Player */}
-            <div className="bg-gradient-to-r from-blue-50 to-violet-50 rounded-2xl p-4 mb-5 border border-blue-100/50">
-              <div className="flex items-center gap-3">
-                <button
-                  onClick={() => setPlayingAudio(playingAudio === call.id ? null : call.id)}
-                  className="w-10 h-10 rounded-full bg-blue-600 text-white flex items-center justify-center shadow-lg shadow-blue-600/25 hover:bg-blue-700 transition-colors"
-                >
-                  {playingAudio === call.id ? <Pause size={16} /> : <Play size={16} className="ml-0.5" />}
-                </button>
-                <div className="flex-1">
-                  <div className="h-1.5 bg-blue-200/50 rounded-full overflow-hidden">
-                    <div className="h-full bg-blue-500 rounded-full" style={{ width: playingAudio === call.id ? "45%" : "0%" }} />
-                  </div>
-                  <div className="flex justify-between mt-1">
-                    <span className="text-xs text-blue-600/60">{playingAudio === call.id ? "1:32" : "0:00"}</span>
-                    <span className="text-xs text-blue-600/60">{call.duration}</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Summary */}
-            <div className="mb-5">
-              <h3 className="text-sm font-bold text-gray-900 mb-2 flex items-center gap-1.5">
-                <MessageSquare size={14} className="text-blue-500" /> AI要約
-              </h3>
-              <p className="text-sm text-gray-600 leading-relaxed bg-gray-50 rounded-xl p-3.5 border border-gray-100">
-                {call.summary}
-              </p>
-            </div>
-
-            {/* Transcript Preview */}
-            <div className="mb-5">
-              <h3 className="text-sm font-bold text-gray-900 mb-2 flex items-center gap-1.5">
-                <Volume2 size={14} className="text-violet-500" /> 文字起こし
-              </h3>
-              <div className="bg-gray-50 rounded-xl p-3.5 border border-gray-100 space-y-2.5 text-sm">
-                <div>
-                  <span className="text-blue-600 font-semibold text-xs">AI受付</span>
-                  <p className="text-gray-600 mt-0.5">お電話ありがとうございます。コールフロー株式会社でございます。</p>
-                </div>
-                <div>
-                  <span className="text-emerald-600 font-semibold text-xs">お客様</span>
-                  <p className="text-gray-600 mt-0.5">あ、すみません、{call.purpose}について聞きたいんですが...</p>
-                </div>
-                <div>
-                  <span className="text-blue-600 font-semibold text-xs">AI受付</span>
-                  <p className="text-gray-600 mt-0.5">かしこまりました。{call.purpose}についてですね。お調べいたしますので少々お待ちください。</p>
-                </div>
-                <p className="text-gray-400 text-xs text-center pt-1">...続きは全文表示で確認</p>
-              </div>
-            </div>
-
-            {/* Action Items */}
-            <div>
-              <h3 className="text-sm font-bold text-gray-900 mb-2 flex items-center gap-1.5">
-                <CheckCircle size={14} className="text-emerald-500" /> 対応事項
-              </h3>
-              <div className="space-y-2">
-                <label className="flex items-center gap-2.5 p-2.5 rounded-xl hover:bg-gray-50 transition-colors cursor-pointer">
-                  <input type="checkbox" className="w-4 h-4 rounded-md border-gray-300 text-blue-600" />
-                  <span className="text-sm text-gray-700">{call.name}に折り返し連絡</span>
-                </label>
-                <label className="flex items-center gap-2.5 p-2.5 rounded-xl hover:bg-gray-50 transition-colors cursor-pointer">
-                  <input type="checkbox" className="w-4 h-4 rounded-md border-gray-300 text-blue-600" />
-                  <span className="text-sm text-gray-700">詳細資料をメールで送付</span>
-                </label>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  };
 
   // ─── Agents View ───
   const AgentsView = () => {
@@ -969,7 +869,9 @@ export default function CallFlowDashboard() {
       </main>
 
       {/* Call Detail Modal */}
-      <CallDetailModal call={selectedCall} onClose={() => setSelectedCall(null)} />
+      {selectedCall && (
+        <CallDetailModal call={selectedCall} onClose={() => setSelectedCall(null)} />
+      )}
     </div>
   );
 }
