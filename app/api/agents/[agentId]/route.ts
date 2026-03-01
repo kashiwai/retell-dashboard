@@ -28,25 +28,48 @@ export async function GET(request: NextRequest, props: Params) {
 
     const agent = await retellClient.agent.retrieve(agentId) as any;
     
-    // Log to see the actual agent structure (for debugging)
-    console.log('Retrieved agent data:', {
-      agent_id: agent.agent_id,
-      has_prompt: !!agent.prompt,
-      has_general_prompt: !!agent.general_prompt,
-      has_begin_message: !!agent.begin_message,
-      has_metadata: !!agent.metadata,
-      metadata_keys: agent.metadata ? Object.keys(agent.metadata) : []
-    });
-    
     // Extract script data - check different possible locations
     let script = null;
     
-    // Check if script is in metadata
-    if (agent.metadata?.script) {
+    // Try to get LLM data if agent uses retell-llm
+    if (agent.response_engine?.type === 'retell-llm' && agent.response_engine?.llm_id) {
+      try {
+        const llm = await retellClient.llm.retrieve(agent.response_engine.llm_id) as any;
+        
+        console.log('Retrieved LLM data:', {
+          llm_id: llm.llm_id,
+          has_begin_message: !!llm.begin_message,
+          has_general_prompt: !!llm.general_prompt,
+          has_states: !!llm.states
+        });
+        
+        // Extract script from LLM data
+        script = {
+          greeting: llm.begin_message || '',
+          main_prompt: llm.general_prompt || '',
+          ending: '', // May be in states
+          hold_message: '',
+          voicemail: ''
+        };
+        
+        // Check if states have additional prompts
+        if (llm.states && Array.isArray(llm.states)) {
+          const mainState = llm.states.find((s: any) => s.name === 'main' || s.name === 'default');
+          if (mainState?.prompt) {
+            script.main_prompt = mainState.prompt;
+          }
+        }
+      } catch (llmError) {
+        console.error('Failed to fetch LLM data:', llmError);
+      }
+    }
+    
+    // Fallback to checking agent metadata
+    if (!script && agent.metadata?.script) {
       script = agent.metadata.script;
     }
-    // Check if there's a prompt field (common in Retell agents)
-    else if (agent.prompt || agent.general_prompt) {
+    // Check if there's a prompt field directly on agent
+    else if (!script && (agent.prompt || agent.general_prompt)) {
       script = {
         greeting: agent.begin_message || '',
         main_prompt: agent.prompt || agent.general_prompt || '',
