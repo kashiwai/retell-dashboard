@@ -6,8 +6,13 @@ import {
   MessageSquare, Volume2, CheckCircle, ChevronRight, Menu, RefreshCw,
   PhoneIncoming, PhoneOutgoing, Clock, TrendingUp, Users, Zap,
   Star, Globe, Shield, Activity, Headphones, Send, ExternalLink,
-  Calendar, User, Mail, MapPin, Filter, Search, Download, MoreVertical
+  Calendar, User, Mail, MapPin, Filter, Search, Download, MoreVertical, Cog
 } from "lucide-react";
+import dynamic from 'next/dynamic';
+
+const AgentConfiguration = dynamic(() => import('./agent-configuration'), {
+  ssr: false
+});
 
 export default function ModernDashboard() {
   const [activeNav, setActiveNav] = useState("dashboard");
@@ -31,6 +36,8 @@ export default function ModernDashboard() {
   const [selectedCall, setSelectedCall] = useState<any>(null);
   const [playingAudio, setPlayingAudio] = useState<string | null>(null);
   const [phoneNumbers, setPhoneNumbers] = useState<any[]>([]);
+  const [showAgentConfig, setShowAgentConfig] = useState(false);
+  const [configAgentId, setConfigAgentId] = useState<string | null>(null);
   const [stats, setStats] = useState({
     todayCalls: 0,
     avgDuration: "0:00",
@@ -397,6 +404,15 @@ export default function ModernDashboard() {
                     </div>
                     <div className="flex gap-2">
                       <button 
+                        onClick={() => {
+                          setConfigAgentId(agent.id);
+                          setShowAgentConfig(true);
+                        }}
+                        className="flex-1 px-3 py-2 bg-purple-50 text-purple-600 rounded-lg hover:bg-purple-100 transition-colors text-sm font-medium flex items-center justify-center gap-1">
+                        <Cog size={14} />
+                        設定
+                      </button>
+                      <button 
                         onClick={() => openEditModal(agent)}
                         className="flex-1 px-3 py-2 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition-colors text-sm font-medium">
                         編集
@@ -405,11 +421,6 @@ export default function ModernDashboard() {
                         onClick={() => alert(`テスト通話機能は準備中です`)}
                         className="flex-1 px-3 py-2 bg-green-50 text-green-600 rounded-lg hover:bg-green-100 transition-colors text-sm font-medium">
                         テスト
-                      </button>
-                      <button 
-                        onClick={() => handleDeleteAgent(agent.id)}
-                        className="px-2 py-2 bg-red-50 text-red-600 rounded-lg hover:bg-red-100 transition-colors text-sm font-medium">
-                        削除
                       </button>
                     </div>
                   </div>
@@ -963,6 +974,23 @@ export default function ModernDashboard() {
             </div>
           </div>
         </div>
+      )}
+      
+      {/* Agent Configuration Modal */}
+      {showAgentConfig && configAgentId && (
+        <AgentConfiguration 
+          agentId={configAgentId}
+          onClose={() => {
+            setShowAgentConfig(false);
+            setConfigAgentId(null);
+          }}
+          onSave={(config) => {
+            console.log("Saved config:", config);
+            fetchData();
+            setShowAgentConfig(false);
+            setConfigAgentId(null);
+          }}
+        />
       )}
     </div>
   );
