@@ -194,45 +194,21 @@ export default function CallDetailModal({ call, onClose }: CallDetailModalProps)
 
   // Use actual call data
   const callDetails = {
-    id: call?.call_id || call?.id || "CALL-20240320-001",
+    id: call?.call_id || call?.id || "",
     direction: call?.direction || call?.metadata?.call_type || "inbound",
     status: call?.call_status || call?.status || "completed",
-    from: call?.from_number || call?.from || "+81 90-1234-5678",
-    to: call?.to_number || call?.to || "+81 50-1808-0215",
-    agent: call?.metadata?.agent_name || call?.agent_name || "カスタマーサポートAI",
+    from: call?.from_number || call?.from || "不明",
+    to: call?.to_number || call?.to || "不明",
+    agent: call?.metadata?.agent_name || call?.agent_name || "AI受付",
     startTime: call?.start_timestamp || new Date().toISOString(),
     endTime: call?.end_timestamp || new Date(Date.now() + (call?.duration_ms || 300000)).toISOString(),
-    duration: call?.duration_ms ? call.duration_ms / 1000 : 300,
+    duration: call?.duration_ms ? call.duration_ms / 1000 : 0,
     recordingUrl: call?.recording_url || null,
-    transcript: call?.transcript || `[00:00] AI: お電話ありがとうございます。〇〇会社の受付AIです。本日はどのようなご用件でしょうか？
-
-[00:08] お客様: あの、製品の不具合について問い合わせたいんですけど。
-
-[00:15] AI: 製品の不具合についてのお問い合わせですね。申し訳ございません。どちらの製品でお困りでしょうか？
-
-[00:23] お客様: 先週購入したABC-1000という型番の製品なんですが、電源が入らなくなってしまって。
-
-[00:32] AI: ABC-1000の電源が入らない状況ですね。大変ご不便をおかけして申し訳ございません。いくつか確認させていただきたいことがございます。
-
-[00:45] AI: まず、電源ケーブルはしっかりと接続されていますでしょうか？
-
-[00:52] お客様: はい、確認しました。ケーブルも新しいものに交換してみたんですが、やはりダメでした。
-
-[01:02] AI: ケーブルも交換されたのですね。それでは、本体のリセットボタンはお試しいただきましたか？本体の背面に小さなリセットボタンがございます。
-
-[01:15] お客様: リセットボタン...あ、ありました。今押してみます。
-
-[01:25] お客様: あ！電源が入りました！ありがとうございます！
-
-[01:30] AI: よかったです！正常に動作したようで安心いたしました。今後も何かお困りのことがございましたら、お気軽にお問い合わせください。
-
-[01:42] お客様: 本当に助かりました。ありがとうございました。
-
-[01:47] AI: こちらこそ、お電話ありがとうございました。良い一日をお過ごしください。失礼いたします。`,
-    summary: summaryData.summary || call?.summary || call?.call_summary || "製品の不具合に関する問い合わせ。リセットボタンの操作で解決。",
-    sentiment: summaryData.sentiment || call?.sentiment || "positive",
-    satisfaction: summaryData.satisfaction_score || call?.satisfaction_score || 95,
-    tags: summaryData.tags.length > 0 ? summaryData.tags : (call?.tags || ["製品サポート", "技術的問題", "解決済み"]),
+    transcript: call?.transcript || '',
+    summary: summaryData.summary || call?.summary || call?.call_summary || '',
+    sentiment: summaryData.sentiment || call?.sentiment || "neutral",
+    satisfaction: summaryData.satisfaction_score || call?.satisfaction_score || 70,
+    tags: summaryData.tags.length > 0 ? summaryData.tags : (call?.tags || []),
     actionItems: summaryData.action_items.length > 0 ? summaryData.action_items : (call?.action_items || []),
     issueType: localIssueType,
     metadata: call?.metadata || {
