@@ -234,7 +234,7 @@ function calculateSatisfaction(sentiment: string, transcript: string): number {
 
 // Extract action items from transcript
 function extractActionItems(transcript: string): string[] {
-  const actionItems = [];
+  const actionItems: string[] = [];
   const lines = transcript.split('\n');
   
   const actionKeywords = ['確認します', '送ります', '連絡します', '手配します', '対応します'];
