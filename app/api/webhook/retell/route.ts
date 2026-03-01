@@ -245,34 +245,42 @@ async function sendLineMessagingNotification(call: any, isAnalysis: boolean) {
   const token = process.env.LINE_CHANNEL_ACCESS_TOKEN;
   if (!token) return;
   
-  // Get user ID from environment variable
+  // Get user ID from environment variable (optional)
   const userId = process.env.LINE_USER_ID;
-  if (!userId) {
-    console.error('LINE_USER_ID not configured. Skipping LINE notification.');
-    console.error('Please follow the setup guide at LINE_SETUP_GUIDE.md');
-    return;
-  }
   
   const message = isAnalysis ? formatAnalyzedMessageRich(call) : formatCallEndedMessageRich(call);
   
-  const response = await fetch('https://api.line.me/v2/bot/message/push', {
+  // Use broadcast if no specific user ID, otherwise use push
+  const endpoint = userId 
+    ? 'https://api.line.me/v2/bot/message/push'
+    : 'https://api.line.me/v2/bot/message/broadcast';
+    
+  const requestBody = userId
+    ? {
+        to: userId,
+        messages: [message]
+      }
+    : {
+        messages: [message]
+      };
+  
+  const response = await fetch(endpoint, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
       'Authorization': `Bearer ${token}`
     },
-    body: JSON.stringify({
-      to: userId,
-      messages: [message]
-    })
+    body: JSON.stringify(requestBody)
   });
   
   if (!response.ok) {
     const error = await response.text();
     console.error('LINE Messaging API error:', error);
     if (error.includes("You can't send messages to yourself")) {
-      console.error('Error: Bot cannot send messages to itself. Please use a valid user ID from a friend account.');
+      console.error('Error: Bot cannot send messages to itself. Using broadcast instead.');
     }
+  } else {
+    console.log(`LINE notification sent successfully via ${userId ? 'push' : 'broadcast'} API`);
   }
 }
 

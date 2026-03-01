@@ -82,37 +82,42 @@ export async function POST(request: NextRequest) {
     message += `🔗 通話ID: ${call_id}\n`;
     message += `📅 送信日時: ${new Date().toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' })}`;
 
-    // Get user ID from environment variable
-    // User must first add the bot as a friend and set their user ID in .env.local
+    // Check if we should use broadcast or push API
+    // If LINE_USER_ID is set, use push API for specific user
+    // Otherwise, use broadcast to send to all followers
     const userId = process.env.LINE_USER_ID;
     
-    if (!userId) {
-      console.error('LINE_USER_ID not configured. Please follow the setup guide at LINE_SETUP_GUIDE.md');
-      return NextResponse.json(
-        { 
-          error: 'LINE送信先が設定されていません', 
-          details: 'LINE_USER_IDを環境変数に設定してください。詳細はLINE_SETUP_GUIDE.mdを参照してください。'
-        },
-        { status: 400 }
-      );
-    }
+    // Send to LINE - use broadcast if no specific user ID
+    const endpoint = userId 
+      ? 'https://api.line.me/v2/bot/message/push'
+      : 'https://api.line.me/v2/bot/message/broadcast';
     
-    // Send to LINE using push message (to specific user)
-    const lineResponse = await fetch('https://api.line.me/v2/bot/message/push', {
+    const requestBody = userId
+      ? {
+          to: userId,
+          messages: [
+            {
+              type: 'text',
+              text: message
+            }
+          ]
+        }
+      : {
+          messages: [
+            {
+              type: 'text',
+              text: message
+            }
+          ]
+        };
+    
+    const lineResponse = await fetch(endpoint, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${lineAccessToken}`,
       },
-      body: JSON.stringify({
-        to: userId,
-        messages: [
-          {
-            type: 'text',
-            text: message
-          }
-        ]
-      })
+      body: JSON.stringify(requestBody)
     });
 
     if (!lineResponse.ok) {
