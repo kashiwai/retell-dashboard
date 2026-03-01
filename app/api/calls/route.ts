@@ -43,13 +43,24 @@ export async function GET(request: NextRequest) {
         custom_analysis: call.call_analysis?.custom_analysis
       });
       
-      // Use Retell API's summary and custom_analysis directly - THIS IS PRIORITY 1
+      // Use Retell API's data directly - THIS IS PRIORITY 1
       let summary = call.call_analysis?.summary || '';
       let customAnalysis = call.call_analysis?.custom_analysis || {};
-      let sentiment = analysis?.sentiment_score ? categorizeSentiment(analysis.sentiment_score) : 'neutral';
+      
+      // Get sentiment from Retell API
+      let sentiment = 'neutral';
       let satisfactionScore = 70;
-      let tags: string[] = [];
-      let actionItems: string[] = [];
+      if (call.call_analysis?.sentiment_score !== undefined) {
+        sentiment = categorizeSentiment(call.call_analysis.sentiment_score);
+        satisfactionScore = Math.round((call.call_analysis.sentiment_score + 1) * 50); // Convert -1 to 1 scale to 0-100
+      }
+      
+      // Get urgency from custom_analysis or detect from transcript
+      let urgency = customAnalysis?.urgency || detectUrgency(transcript);
+      
+      // Get other data from Retell API
+      let tags: string[] = call.call_analysis?.key_points || [];
+      let actionItems: string[] = call.call_analysis?.action_items || [];
       let detailedInfo = null;
       
       // Only try GPT if Retell doesn't have summary AND transcript exists
@@ -115,12 +126,12 @@ export async function GET(request: NextRequest) {
           
           // Create fallback detailed info
           detailedInfo = {
-            customer_name: '不明',
-            phone_number: extractPhoneNumber(transcript),
-            requirement: summary,
-            details: '',
-            urgency: detectUrgency(transcript),
-            status: '未対応'
+            customer_name: customAnalysis?.customer_name || '不明',
+            phone_number: customAnalysis?.phone_number || extractPhoneNumber(transcript),
+            requirement: customAnalysis?.requirement || summary,
+            details: customAnalysis?.details || '',
+            urgency: urgency,
+            status: customAnalysis?.status || '未対応'
           };
         }
       } else {
@@ -141,10 +152,10 @@ export async function GET(request: NextRequest) {
         time: formatTime(call.start_timestamp || Date.now()),
         start_timestamp: call.start_timestamp,
         end_timestamp: call.end_timestamp,
-        from: phoneCall.from_number || phoneCall.from_phone_number || 'Unknown',
-        from_number: phoneCall.from_number || phoneCall.from_phone_number,
-        to: phoneCall.to_number || phoneCall.to_phone_number || 'Unknown',
-        to_number: phoneCall.to_number || phoneCall.to_phone_number,
+        from: call.from_number || call.from_phone_number || '不明',
+        from_number: call.from_number || call.from_phone_number,
+        to: call.to_number || call.to_phone_number || '不明',
+        to_number: call.to_number || call.to_phone_number,
         duration: formatDuration(duration),
         duration_ms: duration,
         status: mapCallStatus(call.call_status || 'unknown'),
@@ -161,12 +172,12 @@ export async function GET(request: NextRequest) {
         tags: tags,
         issue_type: issueType,
         action_items: actionItems,
-        // 詳細情報を追加
+        // 詳細情報を追加 - Retell APIのデータを優先
         customer_name: customAnalysis?.customer_name || detailedInfo?.customer_name || '不明',
-        phone_number: customAnalysis?.phone_number || detailedInfo?.phone_number || '',
-        requirement: customAnalysis?.requirement || detailedInfo?.requirement || summary || '',
+        phone_number: call.from_number || call.from_phone_number || customAnalysis?.phone_number || detailedInfo?.phone_number || '',
+        requirement: call.call_analysis?.summary || customAnalysis?.requirement || detailedInfo?.requirement || summary || '',
         details: customAnalysis?.details || detailedInfo?.details || '',
-        urgency: customAnalysis?.urgency || detailedInfo?.urgency || '中',
+        urgency: urgency,
         response_status: customAnalysis?.status || detailedInfo?.status || '未対応',
         metadata: {
           agent_id: call.agent_id,
