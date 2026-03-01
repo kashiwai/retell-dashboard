@@ -199,7 +199,7 @@ export default function CallDetailModal({ call, onClose }: CallDetailModalProps)
 
   // Handle issue type changes
   const handleIssueTypeChange = (field: string, value: string) => {
-    setLocalIssueType(prev => ({
+    setLocalIssueType((prev: any) => ({
       ...prev,
       [field]: value
     }));
