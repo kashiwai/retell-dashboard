@@ -16,33 +16,24 @@ interface AgentConfigProps {
 }
 
 export default function AgentConfigJapanese({ agentId, onClose, onSave }: AgentConfigProps) {
+  console.log('AgentConfigJapanese mounted with agentId:', agentId);
   const [activeSection, setActiveSection] = useState("script");
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [config, setConfig] = useState({
-    // トークスクリプト
+    // トークスクリプト - 初期値は空
     script: {
-      greeting: "お電話ありがとうございます。〇〇会社の受付AIです。本日はどのようなご用件でしょうか？",
-      main_prompt: `あなたは日本語の電話受付AIアシスタントです。
-以下のガイドラインに従って対応してください：
-
-1. 丁寧で自然な日本語で話してください
-2. お客様の名前と用件を確認してください
-3. 必要に応じて担当者に取り次ぐか、折り返しの約束をしてください
-4. 常に親切で忍耐強く対応してください
-
-重要な情報：
-- 営業時間: 平日 9:00-18:00
-- 土日祝日: 休業
-- 緊急連絡先: 080-1234-5678`,
-      ending: "お電話ありがとうございました。失礼いたします。",
-      hold_message: "少々お待ちください。担当者におつなぎいたします。",
-      voicemail: "ただいま電話に出ることができません。発信音の後にメッセージをお残しください。"
+      greeting: "",
+      main_prompt: "",
+      ending: "",
+      hold_message: "",
+      voicemail: ""
     },
     
-    // 基本設定
+    // 基本設定 - 初期値は空
     general: {
       name: "",
-      voice_id: "jp-female-1",
+      voice_id: "",
       language: "ja",
       voice_speed: 1.0,
       voice_pitch: 1.0,
@@ -81,13 +72,13 @@ export default function AgentConfigJapanese({ agentId, onClose, onSave }: AgentC
       // 相づち設定
       enable_backchanneling: true,
       backchannel_frequency: 0.8,
-      backchannel_words: ["はい", "ええ", "なるほど", "そうですね", "承知しました", "かしこまりました"],
+      backchannel_words: [],
       
       // リマインダー設定
-      reminder_enabled: true,
+      reminder_enabled: false,
       reminder_interval: 15,
       reminder_max_count: 3,
-      reminder_message: "お客様、まだいらっしゃいますか？"
+      reminder_message: ""
     },
     
     // 音声設定
@@ -124,7 +115,7 @@ export default function AgentConfigJapanese({ agentId, onClose, onSave }: AgentC
       optimization: "accuracy",
       
       // 強調キーワード
-      boosted_keywords: "御社,弊社,株式会社,お客様,承知しました,かしこまりました",
+      boosted_keywords: "",
       
       // フィルター
       profanity_filter: true,
@@ -237,11 +228,14 @@ export default function AgentConfigJapanese({ agentId, onClose, onSave }: AgentC
           const agentData = await res.json();
           
           // Debug log
-          console.log('Loaded agent data:', {
+          console.log('[AgentConfigJapanese] Full agent data received:', agentData);
+          console.log('[AgentConfigJapanese] Script data:', {
             agent_name: agentData.agent_name,
             has_script: !!agentData.script,
             script_keys: agentData.script ? Object.keys(agentData.script) : [],
-            script_main_prompt_length: agentData.script?.main_prompt?.length
+            script_main_prompt_length: agentData.script?.main_prompt?.length,
+            script_greeting: agentData.script?.greeting,
+            script_main_prompt_preview: agentData.script?.main_prompt?.substring(0, 100)
           });
           
           // Only update with actual data from API - no defaults
@@ -259,9 +253,9 @@ export default function AgentConfigJapanese({ agentId, onClose, onSave }: AgentC
             }
             
             // Update script data - check multiple possible fields
-            if (agentData.script) {
+            if (agentData.script && typeof agentData.script === 'object') {
               // If script object exists, use it directly
-              console.log('Setting script from API:', agentData.script);
+              console.log('[AgentConfigJapanese] Setting script from API:', agentData.script);
               newConfig.script = {
                 greeting: agentData.script.greeting || '',
                 main_prompt: agentData.script.main_prompt || '',
@@ -269,9 +263,10 @@ export default function AgentConfigJapanese({ agentId, onClose, onSave }: AgentC
                 hold_message: agentData.script.hold_message || '',
                 voicemail: agentData.script.voicemail || ''
               };
+              console.log('[AgentConfigJapanese] Script set in config:', newConfig.script);
             } else if (agentData.prompt || agentData.general_prompt || agentData.begin_message) {
               // Otherwise, construct from individual fields
-              console.log('Constructing script from individual fields');
+              console.log('[AgentConfigJapanese] Constructing script from individual fields');
               newConfig.script = {
                 greeting: agentData.begin_message || '',
                 main_prompt: agentData.prompt || agentData.general_prompt || '',
@@ -279,6 +274,8 @@ export default function AgentConfigJapanese({ agentId, onClose, onSave }: AgentC
                 hold_message: '',
                 voicemail: ''
               };
+            } else {
+              console.log('[AgentConfigJapanese] No script data found in response');
             }
             
             // Update conversation settings
@@ -319,12 +316,12 @@ export default function AgentConfigJapanese({ agentId, onClose, onSave }: AgentC
           // Show error code only
           const errorData = await res.json().catch(() => ({}));
           console.error(`Error loading agent: ${res.status}`, errorData);
-          alert(`エージェントデータの読み込みに失敗しました。エラーコード: ${res.status}`);
+          setLoadError(`エラーコード: ${res.status}`);
         }
       } catch (error) {
         console.error('Failed to load agent data:', error);
         const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-        alert(`エージェントデータの読み込みに失敗しました。エラー: ${errorMessage}`);
+        setLoadError(`エラー: ${errorMessage}`);
       } finally {
         setLoading(false);
       }
@@ -368,6 +365,43 @@ export default function AgentConfigJapanese({ agentId, onClose, onSave }: AgentC
     }
   };
   
+  // ローディング中の表示
+  if (loading) {
+    return (
+      <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
+        <div className="bg-white rounded-xl p-8 shadow-2xl">
+          <div className="flex flex-col items-center gap-4">
+            <div className="w-12 h-12 border-4 border-purple-500 border-t-transparent rounded-full animate-spin"></div>
+            <p className="text-gray-700 font-medium">エージェントデータを読み込み中...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // エラー時の表示
+  if (loadError) {
+    return (
+      <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
+        <div className="bg-white rounded-xl p-8 shadow-2xl max-w-md">
+          <div className="flex flex-col items-center gap-4">
+            <div className="p-3 bg-red-100 rounded-full">
+              <AlertCircle size={32} className="text-red-600" />
+            </div>
+            <h3 className="text-xl font-bold text-gray-900">データ読み込みエラー</h3>
+            <p className="text-gray-600 text-center">{loadError}</p>
+            <button 
+              onClick={onClose}
+              className="px-6 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors"
+            >
+              閉じる
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex z-50">
       <div className="flex-1 bg-gray-50 flex">
@@ -448,7 +482,7 @@ export default function AgentConfigJapanese({ agentId, onClose, onSave }: AgentC
                         onChange={(e) => setConfig({...config, script: {...config.script, greeting: e.target.value}})}
                         className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent resize-none"
                         rows={3}
-                        placeholder="例: お電話ありがとうございます..."
+                        placeholder={config.script.greeting ? "" : "データが読み込まれていません"}
                       />
                     </div>
                     
@@ -463,7 +497,7 @@ export default function AgentConfigJapanese({ agentId, onClose, onSave }: AgentC
                         onChange={(e) => setConfig({...config, script: {...config.script, main_prompt: e.target.value}})}
                         className="w-full px-4 py-4 border-2 border-purple-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent resize-none bg-purple-50/30 text-sm leading-relaxed"
                         rows={15}
-                        placeholder="AIエージェントへの詳細な指示を記入..."
+                        placeholder={config.script.main_prompt ? "" : "データが読み込まれていません"}
                       />
                       <p className="text-xs text-gray-500 mt-2">
                         💡 ヒント: 会社情報、営業時間、対応方法、禁止事項などを明確に記載してください

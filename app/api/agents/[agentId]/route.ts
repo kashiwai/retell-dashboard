@@ -28,19 +28,30 @@ export async function GET(request: NextRequest, props: Params) {
 
     const agent = await retellClient.agent.retrieve(agentId) as any;
     
+    console.log(`[GET /api/agents/${agentId}] Agent retrieved:`, {
+      agent_id: agent.agent_id,
+      agent_name: agent.agent_name,
+      response_engine_type: agent.response_engine?.type,
+      llm_id: agent.response_engine?.llm_id
+    });
+    
     // Extract script data - check different possible locations
     let script = null;
     
     // Try to get LLM data if agent uses retell-llm
     if (agent.response_engine?.type === 'retell-llm' && agent.response_engine?.llm_id) {
       try {
+        console.log(`[GET /api/agents/${agentId}] Fetching LLM with ID:`, agent.response_engine.llm_id);
         const llm = await retellClient.llm.retrieve(agent.response_engine.llm_id) as any;
         
-        console.log('Retrieved LLM data:', {
+        console.log(`[GET /api/agents/${agentId}] Retrieved LLM data:`, {
           llm_id: llm.llm_id,
           has_begin_message: !!llm.begin_message,
+          begin_message_length: llm.begin_message?.length,
           has_general_prompt: !!llm.general_prompt,
-          has_states: !!llm.states
+          general_prompt_length: llm.general_prompt?.length,
+          has_states: !!llm.states,
+          states_count: llm.states?.length
         });
         
         // Extract script from LLM data
@@ -59,9 +70,18 @@ export async function GET(request: NextRequest, props: Params) {
             script.main_prompt = mainState.prompt;
           }
         }
+        
+        console.log(`[GET /api/agents/${agentId}] Script extracted:`, {
+          has_greeting: !!script.greeting,
+          greeting_length: script.greeting?.length,
+          has_main_prompt: !!script.main_prompt,
+          main_prompt_length: script.main_prompt?.length
+        });
       } catch (llmError) {
-        console.error('Failed to fetch LLM data:', llmError);
+        console.error(`[GET /api/agents/${agentId}] Failed to fetch LLM data:`, llmError);
       }
+    } else {
+      console.log(`[GET /api/agents/${agentId}] Agent does not use retell-llm or no LLM ID`);
     }
     
     // Fallback to checking agent metadata

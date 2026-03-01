@@ -415,6 +415,7 @@ export default function ModernDashboard() {
                     <div className="flex gap-2">
                       <button 
                         onClick={() => {
+                          console.log('Opening agent config for:', agent.id, agent.name);
                           setConfigAgentId(agent.id);
                           setShowAgentConfig(true);
                         }}
