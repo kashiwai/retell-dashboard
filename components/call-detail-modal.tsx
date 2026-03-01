@@ -240,10 +240,27 @@ export default function CallDetailModal({ call, onClose }: CallDetailModalProps)
 
       const data = await response.json();
       
-      // Refresh the parent component to show updated data
-      window.location.reload();
+      // Update the local call object with the summarized data
+      Object.assign(call, {
+        customer_name: data.customer_name,
+        phone_number: data.phone_number,
+        requirement: data.requirement,
+        details: data.details,
+        urgency: data.urgency,
+        response_status: data.response_status,
+        summary: data.summary,
+        sentiment: data.sentiment,
+        satisfaction_score: data.satisfaction_score,
+        tags: data.tags,
+        action_items: data.action_items
+      });
       
+      // Force re-render by closing and reopening modal
       alert('GPT要約が完了しました。情報が更新されました。');
+      
+      // Close modal to refresh data
+      onClose();
+      
     } catch (error) {
       console.error('Summarization error:', error);
       alert('要約に失敗しました');

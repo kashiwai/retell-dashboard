@@ -1086,6 +1086,8 @@ export default function ModernDashboard() {
           onClose={() => {
             setShowCallDetail(false);
             setSelectedCallDetail(null);
+            // Refresh call data after modal closes
+            fetchData();
           }}
         />
       )}

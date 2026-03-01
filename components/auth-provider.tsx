@@ -89,19 +89,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   // APIコールにトークンを自動付与
   useEffect(() => {
-    if (token) {
-      const originalFetch = window.fetch;
-      window.fetch = async (input: RequestInfo | URL, init?: RequestInit) => {
-        if (typeof input === 'string' && input.startsWith('/api') && !input.includes('/auth')) {
-          init = init || {};
-          init.headers = {
-            ...init.headers,
-            'Authorization': `Bearer ${token}`
-          };
-        }
-        return originalFetch(input, init);
-      };
-    }
+    if (!token) return;
+
+    const originalFetch = window.fetch;
+    window.fetch = async (input: RequestInfo | URL, init?: RequestInit) => {
+      if (typeof input === 'string' && input.startsWith('/api') && !input.includes('/auth')) {
+        init = init || {};
+        init.headers = {
+          ...init.headers,
+          'Authorization': `Bearer ${token}`
+        };
+      }
+      return originalFetch(input, init);
+    };
+
+    // Cleanup
+    return () => {
+      window.fetch = originalFetch;
+    };
   }, [token]);
 
   return (
