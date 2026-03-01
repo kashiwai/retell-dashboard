@@ -6,11 +6,19 @@ import {
   MessageSquare, Volume2, CheckCircle, ChevronRight, Menu, RefreshCw,
   PhoneIncoming, PhoneOutgoing, Clock, TrendingUp, Users, Zap,
   Star, Globe, Shield, Activity, Headphones, Send, ExternalLink,
-  Calendar, User, Mail, MapPin, Filter, Search, Download, MoreVertical, Cog
+  Calendar, User, Mail, MapPin, Filter, Search, Download, MoreVertical, Cog, FileText
 } from "lucide-react";
 import dynamic from 'next/dynamic';
 
-const AgentConfiguration = dynamic(() => import('./agent-configuration'), {
+const AgentConfigJapanese = dynamic(() => import('./agent-config-japanese'), {
+  ssr: false
+});
+
+const CallDetailModal = dynamic(() => import('./call-detail-modal'), {
+  ssr: false
+});
+
+const Logo = dynamic(() => import('./logo'), {
   ssr: false
 });
 
@@ -44,6 +52,8 @@ export default function ModernDashboard() {
     aiResolution: 85,
     satisfaction: 92
   });
+  const [showCallDetail, setShowCallDetail] = useState(false);
+  const [selectedCallDetail, setSelectedCallDetail] = useState<any>(null);
   
   // Fetch data
   const fetchData = async () => {
@@ -223,7 +233,7 @@ export default function ModernDashboard() {
         return (
           <div className="space-y-6">
             {/* Header */}
-            <div className="bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 rounded-3xl p-8 text-white shadow-2xl">
+            <div className="bg-gradient-to-r from-blue-500 via-cyan-500 to-green-500 rounded-3xl p-8 text-white shadow-2xl">
               <div className="flex justify-between items-start">
                 <div>
                   <h1 className="text-3xl font-bold mb-2">こんにちは！👋</h1>
@@ -365,7 +375,7 @@ export default function ModernDashboard() {
               </div>
               <button
                 onClick={() => setShowCreateAgent(true)}
-                className="px-6 py-3 bg-gradient-to-r from-purple-600 to-pink-600 text-white font-medium rounded-xl shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition-all flex items-center gap-2"
+                className="px-6 py-3 bg-gradient-to-r from-blue-600 to-green-600 text-white font-medium rounded-xl shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition-all flex items-center gap-2"
               >
                 <Plus size={20} />
                 新規作成
@@ -508,12 +518,49 @@ export default function ModernDashboard() {
                           </span>
                         </td>
                         <td className="px-6 py-4">
-                          <button 
-                            onClick={() => setSelectedCall(call)}
-                            className="text-blue-600 hover:text-blue-800"
-                          >
-                            <MoreVertical size={16} />
-                          </button>
+                          <div className="flex items-center gap-1">
+                            {call.recording_url && (
+                              <button
+                                onClick={() => {
+                                  const audio = new Audio(call.recording_url);
+                                  if (playingAudio === call.id) {
+                                    audio.pause();
+                                    setPlayingAudio(null);
+                                  } else {
+                                    audio.play();
+                                    setPlayingAudio(call.id);
+                                  }
+                                }}
+                                className="p-1.5 hover:bg-blue-100 rounded-lg transition-colors group"
+                                title="再生"
+                              >
+                                {playingAudio === call.id ? (
+                                  <Pause size={16} className="text-blue-600" />
+                                ) : (
+                                  <Play size={16} className="text-blue-600 group-hover:text-blue-700" />
+                                )}
+                              </button>
+                            )}
+                            <button
+                              onClick={() => {
+                                setSelectedCallDetail(call);
+                                setShowCallDetail(true);
+                              }}
+                              className="p-1.5 hover:bg-purple-100 rounded-lg transition-colors group"
+                              title="文字起こしを見る"
+                            >
+                              <FileText size={16} className="text-purple-600 group-hover:text-purple-700" />
+                            </button>
+                            <button
+                              onClick={() => {
+                                setSelectedCallDetail(call);
+                                setShowCallDetail(true);
+                              }}
+                              className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors"
+                            >
+                              <MoreVertical size={16} className="text-gray-400" />
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     ))}
@@ -654,16 +701,9 @@ export default function ModernDashboard() {
     <div className="min-h-screen bg-gray-50 flex">
       {/* Sidebar */}
       <aside className={`${sidebarOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"} fixed lg:static inset-y-0 left-0 z-40 w-72 bg-white border-r transition-transform shadow-xl lg:shadow-none`}>
-        <div className="p-6 border-b bg-gradient-to-r from-blue-600 to-purple-600">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-white/20 backdrop-blur rounded-xl">
-              <Phone className="text-white" size={24} />
-            </div>
-            <div>
-              <h1 className="text-xl font-bold text-white">Retell AI</h1>
-              <p className="text-xs text-white/70">Dashboard v2.0</p>
-            </div>
-          </div>
+        <div className="p-6 border-b bg-white">
+          <Logo size="lg" />
+          <p className="text-gray-500 text-sm mt-2 ml-14">AI電話対応サービス</p>
         </div>
         
         <nav className="p-3 space-y-1">
@@ -710,9 +750,7 @@ export default function ModernDashboard() {
                 <Bell size={20} className="text-gray-600" />
                 <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>
               </button>
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center text-white font-bold shadow-lg">
-                A
-              </div>
+              <Logo size="sm" showText={false} />
             </div>
           </div>
         </div>
@@ -764,7 +802,7 @@ export default function ModernDashboard() {
               <button
                 onClick={handleCreateAgent}
                 disabled={creatingAgent || !newAgent.name}
-                className="flex-1 px-4 py-2 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-lg font-medium hover:shadow-lg transition-all disabled:opacity-50"
+                className="flex-1 px-4 py-2 bg-gradient-to-r from-blue-600 to-green-600 text-white rounded-lg font-medium hover:shadow-lg transition-all disabled:opacity-50"
               >
                 {creatingAgent ? "作成中..." : "作成"}
               </button>
@@ -881,7 +919,7 @@ export default function ModernDashboard() {
                 disabled={savingConfig}
                 className={`flex-1 px-4 py-2 ${
                   showNotificationConfig === "Slack"
-                    ? "bg-gradient-to-r from-purple-600 to-pink-600"
+                    ? "bg-gradient-to-r from-blue-600 to-green-600"
                     : "bg-gradient-to-r from-green-600 to-emerald-600"
                 } text-white rounded-lg font-medium hover:shadow-lg transition-all disabled:opacity-50`}
               >
@@ -978,7 +1016,7 @@ export default function ModernDashboard() {
       
       {/* Agent Configuration Modal */}
       {showAgentConfig && configAgentId && (
-        <AgentConfiguration 
+        <AgentConfigJapanese 
           agentId={configAgentId}
           onClose={() => {
             setShowAgentConfig(false);
@@ -989,6 +1027,17 @@ export default function ModernDashboard() {
             fetchData();
             setShowAgentConfig(false);
             setConfigAgentId(null);
+          }}
+        />
+      )}
+      
+      {/* Call Detail Modal */}
+      {showCallDetail && selectedCallDetail && (
+        <CallDetailModal
+          call={selectedCallDetail}
+          onClose={() => {
+            setShowCallDetail(false);
+            setSelectedCallDetail(null);
           }}
         />
       )}
