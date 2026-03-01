@@ -415,9 +415,15 @@ export default function ModernDashboard() {
                     <div className="flex gap-2">
                       <button 
                         onClick={() => {
-                          console.log('Opening agent config for:', agent.id, agent.name);
+                          console.log('[ModernDashboard] Opening agent config for:', agent.id, agent.name);
+                          console.log('[ModernDashboard] Setting configAgentId to:', agent.id);
                           setConfigAgentId(agent.id);
+                          console.log('[ModernDashboard] Setting showAgentConfig to true');
                           setShowAgentConfig(true);
+                          console.log('[ModernDashboard] State after click:', {
+                            configAgentId: agent.id,
+                            showAgentConfig: true
+                          });
                         }}
                         className="flex-1 px-3 py-2 bg-purple-50 text-purple-600 rounded-lg hover:bg-purple-100 transition-colors text-sm font-medium flex items-center justify-center gap-1">
                         <Cog size={14} />
@@ -1016,20 +1022,29 @@ export default function ModernDashboard() {
       )}
       
       {/* Agent Configuration Modal */}
+      {console.log('[ModernDashboard] Render check:', {
+        showAgentConfig,
+        configAgentId,
+        shouldRenderModal: showAgentConfig && configAgentId
+      })}
       {showAgentConfig && configAgentId && (
-        <AgentConfigJapanese 
-          agentId={configAgentId}
-          onClose={() => {
-            setShowAgentConfig(false);
-            setConfigAgentId(null);
-          }}
-          onSave={(config) => {
-            console.log("Saved config:", config);
-            fetchData();
-            setShowAgentConfig(false);
-            setConfigAgentId(null);
-          }}
-        />
+        <>
+          {console.log('[ModernDashboard] Rendering AgentConfigJapanese with agentId:', configAgentId)}
+          <AgentConfigJapanese 
+            agentId={configAgentId}
+            onClose={() => {
+              console.log('[ModernDashboard] Closing agent config');
+              setShowAgentConfig(false);
+              setConfigAgentId(null);
+            }}
+            onSave={(config) => {
+              console.log("[ModernDashboard] Saved config:", config);
+              fetchData();
+              setShowAgentConfig(false);
+              setConfigAgentId(null);
+            }}
+          />
+        </>
       )}
       
       {/* Call Detail Modal */}

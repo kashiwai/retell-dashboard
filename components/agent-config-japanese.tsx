@@ -240,7 +240,8 @@ export default function AgentConfigJapanese({ agentId, onClose, onSave }: AgentC
           
           // Only update with actual data from API - no defaults
           setConfig(prevConfig => {
-            const newConfig = { ...prevConfig };
+            // Create completely new config object to ensure React detects the change
+            const newConfig = JSON.parse(JSON.stringify(prevConfig));
             
             // Update general settings
             if (agentData.agent_name) newConfig.general.name = agentData.agent_name;
@@ -310,8 +311,15 @@ export default function AgentConfigJapanese({ agentId, onClose, onSave }: AgentC
               Object.assign(newConfig, agentData.settings);
             }
             
+            console.log('[AgentConfigJapanese] Final newConfig.script:', newConfig.script);
             return newConfig;
           });
+          
+          // Force re-render by setting loading false again
+          setTimeout(() => {
+            setLoading(false);
+            console.log('[AgentConfigJapanese] Config after state update should have script data');
+          }, 100);
         } else {
           // Show error code only
           const errorData = await res.json().catch(() => ({}));
@@ -459,6 +467,14 @@ export default function AgentConfigJapanese({ agentId, onClose, onSave }: AgentC
             {/* トークスクリプト */}
             {activeSection === "script" && (
               <div className="space-y-6">
+                {/* Debug info - remove this in production */}
+                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 text-xs">
+                  <p className="font-bold text-yellow-800 mb-2">デバッグ情報（開発用）</p>
+                  <p>greeting: {config.script.greeting ? `${config.script.greeting.length}文字` : '空'}</p>
+                  <p>main_prompt: {config.script.main_prompt ? `${config.script.main_prompt.length}文字` : '空'}</p>
+                  <p>ending: {config.script.ending ? `${config.script.ending.length}文字` : '空'}</p>
+                </div>
+                
                 <div className="bg-white rounded-2xl shadow-lg p-8">
                   <div className="flex items-center gap-3 mb-6">
                     <div className="p-3 bg-gradient-to-br from-purple-100 to-pink-100 rounded-xl">
