@@ -411,7 +411,20 @@ export default function AgentConfigJapanese({ agentId, onClose, onSave }: AgentC
   }
 
   return (
-    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex z-50">
+    <>
+      <style dangerouslySetInnerHTML={{ __html: `
+        .agent-config-modal textarea,
+        .agent-config-modal input,
+        .agent-config-modal select {
+          color: #111827 !important;
+          font-weight: 500 !important;
+        }
+        .agent-config-modal textarea::placeholder,
+        .agent-config-modal input::placeholder {
+          color: #9CA3AF !important;
+        }
+      ` }} />
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex z-50 agent-config-modal">
       <div className="flex-1 bg-gray-50 flex">
         {/* サイドバー */}
         <div className="w-72 bg-white shadow-xl">
@@ -2167,5 +2180,6 @@ export default function AgentConfigJapanese({ agentId, onClose, onSave }: AgentC
         </div>
       </div>
     </div>
+    </>
   );
 }
