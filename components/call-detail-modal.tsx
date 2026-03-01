@@ -235,6 +235,8 @@ export default function CallDetailModal({ call, onClose }: CallDetailModalProps)
 
   // Summarize call
   const summarizeCall = async () => {
+    console.log('Summarize button clicked', { call_id: call?.call_id, has_transcript: !!call?.transcript });
+    
     if (!call?.call_id || !call?.transcript) {
       alert('通話記録がありません');
       return;
@@ -242,16 +244,22 @@ export default function CallDetailModal({ call, onClose }: CallDetailModalProps)
 
     setIsSummarizing(true);
     try {
+      console.log('Calling summarize API for call:', call.call_id);
       const response = await fetch(`/api/calls/${call.call_id}/summarize`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' }
       });
 
+      console.log('Summarize API response:', response.status, response.statusText);
+
       if (!response.ok) {
-        throw new Error('要約に失敗しました');
+        const errorText = await response.text();
+        console.error('Summarize API error:', errorText);
+        throw new Error(`要約に失敗しました: ${response.status} ${errorText}`);
       }
 
       const data = await response.json();
+      console.log('Summarize API data:', data);
       
       // Update the local state with the summarized data
       setSummaryData({
@@ -549,34 +557,58 @@ export default function CallDetailModal({ call, onClose }: CallDetailModalProps)
               </div>
               
               <div className="bg-gray-50 rounded-xl p-6 space-y-4">
-                {callDetails.transcript.split('\n\n').map((line: string, i: number) => {
-                  const isAI = line.includes('AI:');
-                  return (
-                    <div
-                      key={i}
-                      className={`flex gap-4 ${isAI ? '' : 'flex-row-reverse'}`}
-                    >
-                      <div className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${
-                        isAI ? 'bg-gradient-to-br from-blue-500 to-purple-500' : 'bg-gradient-to-br from-green-500 to-emerald-500'
-                      }`}>
-                        {isAI ? (
-                          <Bot size={20} className="text-white" />
-                        ) : (
-                          <User size={20} className="text-white" />
-                        )}
-                      </div>
-                      <div className={`flex-1 ${isAI ? '' : 'text-right'}`}>
-                        <div className={`inline-block p-4 rounded-xl max-w-[80%] ${
-                          isAI 
-                            ? 'bg-white text-gray-800' 
-                            : 'bg-gradient-to-r from-blue-500 to-purple-500 text-white'
+                {(() => {
+                  // Try to parse transcript_formatted or use regular transcript
+                  const transcriptText = call?.transcript_formatted || callDetails.transcript;
+                  const lines = transcriptText.split('\n').filter((line: string) => line.trim());
+                  
+                  return lines.map((line: string, i: number) => {
+                    // Check if line contains speaker label
+                    const agentMatch = line.match(/^(agent|AI|エージェント)[:：]/i);
+                    const userMatch = line.match(/^(user|customer|お客様|顧客)[:：]/i);
+                    
+                    let isAgent = false;
+                    let text = line;
+                    
+                    if (agentMatch) {
+                      isAgent = true;
+                      text = line.substring(agentMatch[0].length).trim();
+                    } else if (userMatch) {
+                      isAgent = false;
+                      text = line.substring(userMatch[0].length).trim();
+                    } else {
+                      // Try to guess based on content or default to alternating
+                      isAgent = i % 2 === 0;
+                    }
+                    
+                    return (
+                      <div
+                        key={i}
+                        className={`flex gap-4 ${isAgent ? '' : 'flex-row-reverse'}`}
+                      >
+                        <div className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${
+                          isAgent ? 'bg-gradient-to-br from-blue-500 to-purple-500' : 'bg-gradient-to-br from-green-500 to-emerald-500'
                         }`}>
-                          <p className="text-sm whitespace-pre-wrap">{line}</p>
+                          {isAgent ? (
+                            <Bot size={20} className="text-white" />
+                          ) : (
+                            <User size={20} className="text-white" />
+                          )}
+                        </div>
+                        <div className={`flex-1 ${isAgent ? '' : 'text-right'}`}>
+                          <div className={`inline-block p-4 rounded-xl max-w-[80%] ${
+                            isAgent 
+                              ? 'bg-white text-gray-800 shadow-sm' 
+                              : 'bg-gradient-to-r from-blue-500 to-purple-500 text-white shadow-md'
+                          }`}>
+                            <p className="text-sm font-medium mb-1">{isAgent ? 'エージェント' : 'お客様'}</p>
+                            <p className="text-sm whitespace-pre-wrap">{text}</p>
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  );
-                })}
+                    );
+                  });
+                })()}
               </div>
             </div>
           )}
@@ -584,37 +616,27 @@ export default function CallDetailModal({ call, onClose }: CallDetailModalProps)
           {/* Summary Tab */}
           {activeTab === "summary" && (
             <div className="space-y-6">
-              {/* GPT要約ボタン */}
-              {(!summaryData.customer_name || summaryData.customer_name === '不明') && call?.transcript && (
-                <div className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-xl border-2 border-blue-200 p-6">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <h3 className="text-lg font-bold text-gray-900 mb-2">GPT要約機能</h3>
-                      <p className="text-sm text-gray-600">
-                        この通話をGPTで詳細分析し、お客様名、電話番号、要件、緊急度などを自動抽出します
-                      </p>
-                    </div>
-                    <button
-                      onClick={summarizeCall}
-                      disabled={isSummarizing}
-                      className={`flex items-center gap-2 px-6 py-3 rounded-lg font-medium transition-all ${
-                        isSummarizing 
-                          ? 'bg-gray-300 text-gray-500 cursor-not-allowed' 
-                          : 'bg-gradient-to-r from-blue-600 to-purple-600 text-white hover:from-blue-700 hover:to-purple-700 shadow-lg hover:shadow-xl'
-                      }`}
-                    >
-                      <Sparkles size={20} />
-                      {isSummarizing ? '分析中...' : 'GPTで要約する'}
-                    </button>
+
+              {/* Retell要約 */}
+              <div className="bg-white rounded-xl border-2 border-gray-100 p-6">
+                <h3 className="text-lg font-bold text-gray-900 mb-4">通話の要約</h3>
+                <p className="text-gray-700">{call?.call_analysis?.summary || callDetails.summary}</p>
+              </div>
+
+              {/* カスタム分析 */}
+              {call?.custom_analysis && Object.keys(call.custom_analysis).length > 0 && (
+                <div className="bg-white rounded-xl border-2 border-gray-100 p-6">
+                  <h3 className="text-lg font-bold text-gray-900 mb-4">詳細分析</h3>
+                  <div className="space-y-3">
+                    {Object.entries(call.custom_analysis).map(([key, value]) => (
+                      <div key={key}>
+                        <p className="text-sm text-gray-500">{key}</p>
+                        <p className="text-gray-700 font-medium">{value as string}</p>
+                      </div>
+                    ))}
                   </div>
                 </div>
               )}
-
-              {/* 要約 */}
-              <div className="bg-white rounded-xl border-2 border-gray-100 p-6">
-                <h3 className="text-lg font-bold text-gray-900 mb-4">通話の要約</h3>
-                <p className="text-gray-700">{callDetails.summary}</p>
-              </div>
 
               {/* 感情分析 */}
               <div className="bg-white rounded-xl border-2 border-gray-100 p-6">

@@ -35,8 +35,9 @@ export async function GET(request: NextRequest) {
       const transcript = call.transcript || '';
       const duration = (call.end_timestamp || 0) - (call.start_timestamp || 0);
       
-      // Try to get GPT-generated summary if transcript exists
-      let summary = analysis?.summary;
+      // Use Retell API's summary and custom_analysis directly
+      let summary = call.call_analysis?.summary || '';
+      let customAnalysis = call.call_analysis?.custom_analysis || {};
       let sentiment = analysis?.sentiment_score ? categorizeSentiment(analysis.sentiment_score) : 'neutral';
       let satisfactionScore = 70;
       let tags: string[] = [];
@@ -145,20 +146,22 @@ export async function GET(request: NextRequest) {
         sentiment: sentiment,
         satisfaction_score: satisfactionScore,
         summary: summary,
+        custom_analysis: customAnalysis,
         purpose: analysis?.intent || issueType.category || 'お問い合わせ',
         transcript: transcript,
+        transcript_formatted: call.transcript_formatted || transcript,
         recording_url: call.recording_url || null,
         analysis: analysis || null,
         tags: tags,
         issue_type: issueType,
         action_items: actionItems,
         // 詳細情報を追加
-        customer_name: detailedInfo?.customer_name || '不明',
-        phone_number: detailedInfo?.phone_number || '',
-        requirement: detailedInfo?.requirement || summary,
-        details: detailedInfo?.details || '',
-        urgency: detailedInfo?.urgency || '中',
-        response_status: detailedInfo?.status || '未対応',
+        customer_name: customAnalysis?.customer_name || detailedInfo?.customer_name || '不明',
+        phone_number: customAnalysis?.phone_number || detailedInfo?.phone_number || '',
+        requirement: customAnalysis?.requirement || detailedInfo?.requirement || summary,
+        details: customAnalysis?.details || detailedInfo?.details || '',
+        urgency: customAnalysis?.urgency || detailedInfo?.urgency || '中',
+        response_status: customAnalysis?.status || detailedInfo?.status || '未対応',
         metadata: {
           agent_id: call.agent_id,
           agent_name: call.agent_name || 'AI受付',

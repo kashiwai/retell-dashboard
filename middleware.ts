@@ -4,6 +4,9 @@ import type { NextRequest } from 'next/server';
 // 認証が不要なパス
 const PUBLIC_PATHS = ['/login', '/api/auth/login'];
 
+// 内部APIコールは認証不要
+const INTERNAL_API_PATHS = ['/api/summarize'];
+
 export function middleware(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
   
