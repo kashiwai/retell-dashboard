@@ -48,15 +48,22 @@ export async function GET(request: NextRequest) {
       });
       
       // Use Retell API's data directly - THIS IS PRIORITY 1
-      let summary = call.call_analysis?.summary || '';
-      let customAnalysis = call.call_analysis?.custom_analysis || {};
+      let summary = call.call_analysis?.call_summary || '';
+      let customAnalysis = call.call_analysis?.custom_analysis_data || {};
       
       // Get sentiment from Retell API
       let sentiment = 'neutral';
       let satisfactionScore = 70;
-      if (call.call_analysis?.sentiment_score !== undefined) {
-        sentiment = categorizeSentiment(call.call_analysis.sentiment_score);
-        satisfactionScore = Math.round((call.call_analysis.sentiment_score + 1) * 50); // Convert -1 to 1 scale to 0-100
+      if (call.call_analysis?.user_sentiment) {
+        const userSentiment = call.call_analysis.user_sentiment.toLowerCase();
+        if (userSentiment.includes('positive')) sentiment = 'positive';
+        else if (userSentiment.includes('negative')) sentiment = 'negative';
+        else sentiment = 'neutral';
+        
+        // Calculate satisfaction based on sentiment
+        if (sentiment === 'positive') satisfactionScore = 85;
+        else if (sentiment === 'negative') satisfactionScore = 40;
+        else satisfactionScore = 70;
       }
       
       // Get urgency from custom_analysis or detect from transcript
@@ -156,10 +163,11 @@ export async function GET(request: NextRequest) {
         time: formatTime(call.start_timestamp || Date.now()),
         start_timestamp: call.start_timestamp,
         end_timestamp: call.end_timestamp,
-        from: call.from_number || call.from_phone_number || '不明',
-        from_number: call.from_number || call.from_phone_number,
-        to: call.to_number || call.to_phone_number || '不明',
-        to_number: call.to_number || call.to_phone_number,
+        // Retell APIには電話番号フィールドがないため、custom_analysis_dataから取得
+        from: customAnalysis['電話番号、名前'] ? customAnalysis['電話番号、名前'].split('、')[0] : '不明',
+        from_number: customAnalysis['電話番号、名前'] ? customAnalysis['電話番号、名前'].split('、')[0] : '',
+        to: 'AI受付',
+        to_number: '',
         duration: formatDuration(duration),
         duration_ms: duration,
         status: mapCallStatus(call.call_status || 'unknown'),
@@ -178,8 +186,8 @@ export async function GET(request: NextRequest) {
         action_items: actionItems,
         // 詳細情報を追加 - Retell APIのデータを優先
         customer_name: customAnalysis?.customer_name || detailedInfo?.customer_name || '不明',
-        phone_number: call.from_number || call.from_phone_number || customAnalysis?.phone_number || detailedInfo?.phone_number || '',
-        requirement: call.call_analysis?.summary || customAnalysis?.requirement || detailedInfo?.requirement || summary || '',
+        phone_number: customAnalysis['電話番号、名前'] ? customAnalysis['電話番号、名前'].split('、')[0] : detailedInfo?.phone_number || '',
+        requirement: call.call_analysis?.call_summary || customAnalysis?.requirement || detailedInfo?.requirement || summary || '',
         details: customAnalysis?.details || detailedInfo?.details || '',
         urgency: urgency,
         response_status: customAnalysis?.status || detailedInfo?.status || '未対応',
