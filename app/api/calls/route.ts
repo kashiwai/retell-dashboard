@@ -38,6 +38,10 @@ export async function GET(request: NextRequest) {
       // Log the call data for debugging
       console.log('Processing call:', {
         call_id: call.call_id,
+        from_number: call.from_number,
+        from_phone_number: call.from_phone_number,
+        to_number: call.to_number,
+        to_phone_number: call.to_phone_number,
         has_call_analysis: !!call.call_analysis,
         summary_preview: call.call_analysis?.summary?.substring(0, 100),
         custom_analysis: call.call_analysis?.custom_analysis

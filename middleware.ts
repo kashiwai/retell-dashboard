@@ -7,7 +7,7 @@ const PUBLIC_PATHS = [
   '/api/auth/login',
   '/api/webhook/retell',  // Retell webhook
   '/api/line/webhook',     // LINE webhook
-  '/api/notify/line'       // LINE notify
+  '/api/notify/line'       // LINE notify (includes /api/notify/line/manual)
 ];
 
 // 内部APIコールは認証不要
