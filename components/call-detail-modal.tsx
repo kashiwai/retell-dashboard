@@ -658,8 +658,22 @@ export default function CallDetailModal({ call, onClose }: CallDetailModalProps)
 
               {/* Retell要約 */}
               <div className="bg-white rounded-xl border-2 border-gray-100 p-6">
-                <h3 className="text-lg font-bold text-gray-900 mb-4">通話の要約</h3>
-                <p className="text-gray-700">{call?.call_analysis?.summary || callDetails.summary}</p>
+                <div className="flex justify-between items-center mb-4">
+                  <h3 className="text-lg font-bold text-gray-900">通話の要約</h3>
+                  {call?.transcript && (!callData?.call_analysis?.summary && !call?.call_analysis?.summary) && (
+                    <button
+                      onClick={summarizeCall}
+                      disabled={isSummarizing}
+                      className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-lg hover:from-purple-700 hover:to-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                    >
+                      <Sparkles size={16} />
+                      {isSummarizing ? '要約生成中...' : 'GPT要約を生成'}
+                    </button>
+                  )}
+                </div>
+                <p className="text-gray-700">
+                  {callData?.call_analysis?.summary || call?.call_analysis?.summary || callDetails.summary || summaryData.summary || '要約データがありません。GPT要約ボタンをクリックして生成してください。'}
+                </p>
               </div>
 
               {/* カスタム分析 */}
