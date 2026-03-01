@@ -240,11 +240,8 @@ export default function CallDetailModal({ call, onClose }: CallDetailModalProps)
 
       const data = await response.json();
       
-      // Update the call object with new summary data
-      if (onClose) {
-        // Refresh the parent component to show updated data
-        window.location.reload();
-      }
+      // Refresh the parent component to show updated data
+      window.location.reload();
       
       alert('GPT要約が完了しました。情報が更新されました。');
     } catch (error) {

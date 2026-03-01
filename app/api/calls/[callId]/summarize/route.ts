@@ -3,9 +3,11 @@ import { Retell } from 'retell-sdk';
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { callId: string } }
+  { params }: { params: Promise<{ callId: string }> }
 ) {
   try {
+    const { callId } = await params;
+    
     if (!process.env.RETELL_API_KEY) {
       return NextResponse.json(
         { error: 'Retell API key not configured' },
@@ -18,7 +20,7 @@ export async function POST(
     });
 
     // Get the call data
-    const call = await retellClient.call.retrieve(params.callId) as any;
+    const call = await retellClient.call.retrieve(callId) as any;
     
     if (!call) {
       return NextResponse.json(

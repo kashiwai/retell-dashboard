@@ -6,8 +6,10 @@ import {
   MessageSquare, Volume2, CheckCircle, ChevronRight, Menu, RefreshCw,
   PhoneIncoming, PhoneOutgoing, Clock, TrendingUp, Users, Zap,
   Star, Globe, Shield, Activity, Headphones, Send, ExternalLink,
-  Calendar, User, Mail, MapPin, Filter, Search, Download, MoreVertical, Cog, FileText
+  Calendar, User, Mail, MapPin, Filter, Search, Download, MoreVertical, Cog, FileText,
+  LogOut
 } from "lucide-react";
+import { useAuth } from '@/components/auth-provider';
 import dynamic from 'next/dynamic';
 
 const AgentConfigJapanese = dynamic(() => import('./agent-config-japanese'), {
@@ -23,6 +25,7 @@ const Logo = dynamic(() => import('./logo'), {
 });
 
 export default function ModernDashboard() {
+  const { user, logout } = useAuth();
   const [activeNav, setActiveNav] = useState("dashboard");
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -746,6 +749,28 @@ export default function ModernDashboard() {
             );
           })}
         </nav>
+        
+        {/* User Info & Logout */}
+        <div className="absolute bottom-0 left-0 right-0 p-4 border-t bg-gray-50">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-500 rounded-full flex items-center justify-center">
+                <User size={20} className="text-white" />
+              </div>
+              <div>
+                <p className="text-sm font-medium text-gray-900">{user?.name || 'ユーザー'}</p>
+                <p className="text-xs text-gray-500">{user?.role === 'admin' ? '管理者' : 'ユーザー'}</p>
+              </div>
+            </div>
+            <button
+              onClick={logout}
+              className="p-2 hover:bg-gray-200 rounded-lg transition-colors group"
+              title="ログアウト"
+            >
+              <LogOut size={18} className="text-gray-500 group-hover:text-red-500" />
+            </button>
+          </div>
+        </div>
       </aside>
       
       {/* Main Content */}
