@@ -43,7 +43,8 @@ export async function GET(request: NextRequest) {
       let actionItems: string[] = [];
       let detailedInfo = null;
       
-      if (transcript && !summary) {
+      // Always try to get detailed info if transcript exists
+      if (transcript) {
         try {
           // Call GPT API for detailed analysis
           const detailedRes = await fetch(`${request.nextUrl.origin}/api/summarize`, {
@@ -54,7 +55,10 @@ export async function GET(request: NextRequest) {
           
           if (detailedRes.ok) {
             detailedInfo = await detailedRes.json();
-            summary = detailedInfo.summary || detailedInfo.requirement;
+            // Use GPT summary if available, otherwise keep existing
+            if (!summary || detailedInfo.requirement) {
+              summary = detailedInfo.summary || detailedInfo.requirement;
+            }
           }
           
           // Get sentiment analysis
@@ -101,6 +105,16 @@ export async function GET(request: NextRequest) {
           satisfactionScore = calculateSatisfaction(sentiment, transcript);
           tags = generateTags(transcript, summary);
           actionItems = extractActionItems(transcript);
+          
+          // Create fallback detailed info
+          detailedInfo = {
+            customer_name: '不明',
+            phone_number: extractPhoneNumber(transcript),
+            requirement: summary,
+            details: '',
+            urgency: detectUrgency(transcript),
+            status: '未対応'
+          };
         }
       } else {
         // Use fallback methods if no transcript or summary already exists
@@ -323,4 +337,22 @@ function extractActionItems(transcript: string): string[] {
   });
   
   return actionItems;
+}
+
+// Extract phone number from transcript
+function extractPhoneNumber(transcript: string): string {
+  // Match common Japanese phone number formats
+  const phoneRegex = /(\d{2,4}[-\s]?\d{2,4}[-\s]?\d{3,4})|(\d{10,11})/g;
+  const matches = transcript.match(phoneRegex);
+  return matches ? matches[0] : '';
+}
+
+// Detect urgency from transcript
+function detectUrgency(transcript: string): string {
+  const highUrgencyWords = ['至急', '緊急', '今すぐ', '大至急', '急ぎ'];
+  const mediumUrgencyWords = ['早めに', 'なるべく早く', 'できれば今日中', '本日中'];
+  
+  if (highUrgencyWords.some(word => transcript.includes(word))) return '高';
+  if (mediumUrgencyWords.some(word => transcript.includes(word))) return '中';
+  return '低';
 }
