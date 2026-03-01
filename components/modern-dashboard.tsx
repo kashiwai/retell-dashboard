@@ -17,8 +17,12 @@ export default function ModernDashboard() {
   // States
   const [agents, setAgents] = useState<any[]>([]);
   const [showCreateAgent, setShowCreateAgent] = useState(false);
+  const [showEditAgent, setShowEditAgent] = useState(false);
+  const [selectedAgent, setSelectedAgent] = useState<any>(null);
   const [newAgent, setNewAgent] = useState({ name: "", voice_id: "", language: "ja" });
+  const [editingAgent, setEditingAgent] = useState({ name: "", voice_id: "", language: "ja" });
   const [creatingAgent, setCreatingAgent] = useState(false);
+  const [updatingAgent, setUpdatingAgent] = useState(false);
   const [showNotificationConfig, setShowNotificationConfig] = useState<string | null>(null);
   const [slackWebhook, setSlackWebhook] = useState("");
   const [lineToken, setLineToken] = useState("");
@@ -88,12 +92,80 @@ export default function ModernDashboard() {
         setShowCreateAgent(false);
         setNewAgent({ name: "", voice_id: "", language: "ja" });
         fetchData();
+        alert("エージェントを作成しました");
+      } else {
+        const error = await res.json();
+        alert(`エラー: ${error.error || "作成に失敗しました"}`);
       }
     } catch (error) {
       console.error("Failed to create agent:", error);
+      alert("エージェントの作成に失敗しました");
     } finally {
       setCreatingAgent(false);
     }
+  };
+  
+  // Update agent
+  const handleUpdateAgent = async () => {
+    if (!editingAgent.name || !selectedAgent) return;
+    setUpdatingAgent(true);
+    try {
+      const res = await fetch("/api/agents", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          agent_id: selectedAgent.id,
+          agent_name: editingAgent.name,
+          voice_id: editingAgent.voice_id,
+          language: editingAgent.language
+        })
+      });
+      if (res.ok) {
+        setShowEditAgent(false);
+        setSelectedAgent(null);
+        fetchData();
+        alert("エージェントを更新しました");
+      } else {
+        const error = await res.json();
+        alert(`エラー: ${error.error || "更新に失敗しました"}`);
+      }
+    } catch (error) {
+      console.error("Failed to update agent:", error);
+      alert("エージェントの更新に失敗しました");
+    } finally {
+      setUpdatingAgent(false);
+    }
+  };
+  
+  // Delete agent
+  const handleDeleteAgent = async (agentId: string) => {
+    if (!confirm("このエージェントを削除しますか？")) return;
+    try {
+      const res = await fetch(`/api/agents?agent_id=${agentId}`, {
+        method: "DELETE"
+      });
+      if (res.ok) {
+        fetchData();
+        alert("エージェントを削除しました");
+      } else {
+        const error = await res.json();
+        alert(`エラー: ${error.error || "削除に失敗しました"}`);
+      }
+    } catch (error) {
+      console.error("Failed to delete agent:", error);
+      alert("エージェントの削除に失敗しました");
+    }
+  };
+  
+  // Open edit modal
+  const openEditModal = (agent: any) => {
+    setSelectedAgent(agent);
+    setEditingAgent({
+      name: agent.name,
+      voice_id: agent.voice || "",
+      language: agent.lang === "ja-JP" ? "ja" : agent.lang || "ja"
+    });
+    setShowEditAgent(true);
   };
   
   // Save notification config
@@ -324,11 +396,20 @@ export default function ModernDashboard() {
                       </div>
                     </div>
                     <div className="flex gap-2">
-                      <button className="flex-1 px-3 py-2 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition-colors text-sm font-medium">
+                      <button 
+                        onClick={() => openEditModal(agent)}
+                        className="flex-1 px-3 py-2 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition-colors text-sm font-medium">
                         編集
                       </button>
-                      <button className="flex-1 px-3 py-2 bg-green-50 text-green-600 rounded-lg hover:bg-green-100 transition-colors text-sm font-medium">
+                      <button 
+                        onClick={() => alert(`テスト通話機能は準備中です`)}
+                        className="flex-1 px-3 py-2 bg-green-50 text-green-600 rounded-lg hover:bg-green-100 transition-colors text-sm font-medium">
                         テスト
+                      </button>
+                      <button 
+                        onClick={() => handleDeleteAgent(agent.id)}
+                        className="px-2 py-2 bg-red-50 text-red-600 rounded-lg hover:bg-red-100 transition-colors text-sm font-medium">
+                        削除
                       </button>
                     </div>
                   </div>
@@ -678,6 +759,70 @@ export default function ModernDashboard() {
               </button>
               <button
                 onClick={() => setShowCreateAgent(false)}
+                className="flex-1 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg font-medium hover:bg-gray-200 transition-colors"
+              >
+                キャンセル
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      
+      {/* Edit Agent Modal */}
+      {showEditAgent && selectedAgent && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl p-6 w-full max-w-md shadow-2xl">
+            <h3 className="text-xl font-bold text-gray-900 mb-6">エージェント編集</h3>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">エージェント名</label>
+                <input
+                  type="text"
+                  value={editingAgent.name}
+                  onChange={(e) => setEditingAgent({ ...editingAgent, name: e.target.value })}
+                  className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  placeholder="例: 営業受付AI"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">音声ID</label>
+                <input
+                  type="text"
+                  value={editingAgent.voice_id}
+                  onChange={(e) => setEditingAgent({ ...editingAgent, voice_id: e.target.value })}
+                  className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  placeholder="例: 11labs-Adrian"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">言語</label>
+                <select
+                  value={editingAgent.language}
+                  onChange={(e) => setEditingAgent({ ...editingAgent, language: e.target.value })}
+                  className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                >
+                  <option value="ja">日本語</option>
+                  <option value="en">英語</option>
+                </select>
+              </div>
+              <div className="text-xs text-gray-500">
+                <p>エージェントID: {selectedAgent.id}</p>
+                <p>本日の通話: {selectedAgent.calls_today}件</p>
+              </div>
+            </div>
+            <div className="flex gap-3 mt-6">
+              <button
+                onClick={handleUpdateAgent}
+                disabled={updatingAgent || !editingAgent.name}
+                className="flex-1 px-4 py-2 bg-gradient-to-r from-blue-600 to-cyan-600 text-white rounded-lg font-medium hover:shadow-lg transition-all disabled:opacity-50"
+              >
+                {updatingAgent ? "更新中..." : "更新"}
+              </button>
+              <button
+                onClick={() => {
+                  setShowEditAgent(false);
+                  setSelectedAgent(null);
+                }}
                 className="flex-1 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg font-medium hover:bg-gray-200 transition-colors"
               >
                 キャンセル

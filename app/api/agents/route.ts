@@ -135,3 +135,86 @@ export async function POST(request: NextRequest) {
     );
   }
 }
+
+// PUT: Update an agent
+export async function PUT(request: NextRequest) {
+  try {
+    if (!process.env.RETELL_API_KEY) {
+      return NextResponse.json(
+        { error: 'Retell API key not configured' },
+        { status: 500 }
+      );
+    }
+
+    const retellClient = new Retell({ 
+      apiKey: process.env.RETELL_API_KEY 
+    });
+
+    const body = await request.json();
+    const { agent_id, ...updateData } = body;
+
+    if (!agent_id) {
+      return NextResponse.json(
+        { error: 'Agent ID is required' },
+        { status: 400 }
+      );
+    }
+
+    // Update agent
+    const agent = await retellClient.agent.update(agent_id, updateData as any);
+
+    return NextResponse.json({
+      success: true,
+      agent_id: agent.agent_id,
+      message: 'エージェントを更新しました'
+    });
+    
+  } catch (error: any) {
+    console.error('Update agent error:', error);
+    return NextResponse.json(
+      { error: error.message },
+      { status: 500 }
+    );
+  }
+}
+
+// DELETE: Delete an agent
+export async function DELETE(request: NextRequest) {
+  try {
+    if (!process.env.RETELL_API_KEY) {
+      return NextResponse.json(
+        { error: 'Retell API key not configured' },
+        { status: 500 }
+      );
+    }
+
+    const retellClient = new Retell({ 
+      apiKey: process.env.RETELL_API_KEY 
+    });
+
+    const { searchParams } = new URL(request.url);
+    const agent_id = searchParams.get('agent_id');
+
+    if (!agent_id) {
+      return NextResponse.json(
+        { error: 'Agent ID is required' },
+        { status: 400 }
+      );
+    }
+
+    // Delete agent
+    await retellClient.agent.delete(agent_id);
+
+    return NextResponse.json({
+      success: true,
+      message: 'エージェントを削除しました'
+    });
+    
+  } catch (error: any) {
+    console.error('Delete agent error:', error);
+    return NextResponse.json(
+      { error: error.message },
+      { status: 500 }
+    );
+  }
+}
