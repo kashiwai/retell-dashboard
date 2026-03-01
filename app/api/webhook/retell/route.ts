@@ -3,14 +3,64 @@ import { NextRequest, NextResponse } from 'next/server';
 // Force dynamic rendering
 export const dynamic = 'force-dynamic';
 
+// Disable body parsing to handle raw body
+export const runtime = 'edge';
+
 // Retell Webhook endpoint
 export async function POST(request: NextRequest) {
   try {
-    const payload = await request.json();
+    // Log all headers for debugging
+    const headers: any = {};
+    request.headers.forEach((value, key) => {
+      headers[key] = value;
+    });
+    console.log('Webhook headers:', headers);
+    
+    // Check for API key in header if Retell requires it
+    const apiKey = request.headers.get('x-api-key') || request.headers.get('authorization');
+    if (apiKey) {
+      console.log('API key provided in webhook request');
+    }
+    
+    // Get the raw body
+    const rawBody = await request.text();
+    
+    // Handle empty body for test webhooks
+    if (!rawBody) {
+      console.log('Empty webhook body received - likely a test');
+      return NextResponse.json({ 
+        success: true,
+        message: 'Webhook endpoint active',
+        timestamp: new Date().toISOString()
+      }, { status: 200 });
+    }
+    
+    const payload = JSON.parse(rawBody);
     console.log('Retell webhook received:', payload);
+    
+    // Optional: Verify webhook signature if secret is configured
+    const webhookSecret = process.env.RETELL_WEBHOOK_SECRET;
+    if (webhookSecret) {
+      const signature = request.headers.get('x-retell-signature');
+      if (!signature) {
+        console.warn('No signature provided in webhook request');
+        // For now, allow the request to proceed
+      }
+      // TODO: Implement signature verification if needed
+    }
 
     // Check event type
-    const eventType = payload.event;
+    const eventType = payload.event || payload.type;
+    
+    // Handle test webhook from Retell
+    if (eventType === 'test' || eventType === 'webhook.test' || payload.test === true) {
+      console.log('Test webhook received from Retell');
+      return NextResponse.json({ 
+        success: true,
+        message: 'Webhook test successful',
+        timestamp: new Date().toISOString()
+      });
+    }
     
     if (eventType === 'call_ended' || eventType === 'call.ended') {
       // Call ended event - send LINE notification
@@ -20,7 +70,11 @@ export async function POST(request: NextRequest) {
       await handleCallAnalyzed(payload);
     }
 
-    return NextResponse.json({ success: true });
+    return NextResponse.json({ 
+      success: true,
+      received: true,
+      event: eventType 
+    });
   } catch (error: any) {
     console.error('Webhook error:', error);
     return NextResponse.json(
