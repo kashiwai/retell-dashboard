@@ -37,8 +37,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     // ローカルストレージから認証情報を取得
-    const storedToken = localStorage.getItem('auth_token');
-    const storedUser = localStorage.getItem('user');
+    const storedToken = typeof window !== 'undefined' ? localStorage.getItem('auth_token') : null;
+    const storedUser = typeof window !== 'undefined' ? localStorage.getItem('user') : null;
 
     if (storedToken && storedUser) {
       try {
@@ -50,16 +50,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           setUser(JSON.parse(storedUser));
         } else {
           // トークンが期限切れの場合
-          localStorage.removeItem('auth_token');
-          localStorage.removeItem('user');
+          if (typeof window !== 'undefined') {
+            localStorage.removeItem('auth_token');
+            localStorage.removeItem('user');
+          }
           if (pathname !== '/login') {
             router.push('/login');
           }
         }
       } catch (error) {
         console.error('Invalid token:', error);
-        localStorage.removeItem('auth_token');
-        localStorage.removeItem('user');
+        if (typeof window !== 'undefined') {
+          localStorage.removeItem('auth_token');
+          localStorage.removeItem('user');
+        }
         if (pathname !== '/login') {
           router.push('/login');
         }
@@ -70,7 +74,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
 
     setIsLoading(false);
-  }, [pathname, router]);
+  }, []); // Remove dependencies to run only once
 
   const login = (newToken: string, newUser: User) => {
     setToken(newToken);

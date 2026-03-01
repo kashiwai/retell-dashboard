@@ -312,7 +312,7 @@ export default function ModernDashboard() {
                         </div>
                         <div>
                           <p className="font-medium text-gray-900">{agent.name}</p>
-                          <p className="text-xs text-gray-500">本日 {agent.calls_today}件処理</p>
+                          <p className="text-xs text-gray-500">本日 {agent.calls_today || 0}件処理</p>
                         </div>
                       </div>
                       <div className="flex items-center gap-2">
@@ -412,7 +412,7 @@ export default function ModernDashboard() {
                       </div>
                       <div className="flex items-center gap-2 text-sm text-gray-500">
                         <Activity size={14} />
-                        <span>本日 {agent.calls_today}件</span>
+                        <span>本日 {agent.calls_today || 0}件</span>
                       </div>
                     </div>
                     <div className="flex gap-2">

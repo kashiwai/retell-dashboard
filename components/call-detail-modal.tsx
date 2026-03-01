@@ -30,6 +30,19 @@ export default function CallDetailModal({ call, onClose }: CallDetailModalProps)
     priority: "normal"
   });
   const [isSummarizing, setIsSummarizing] = useState(false);
+  const [summaryData, setSummaryData] = useState({
+    customer_name: call?.customer_name || '不明',
+    phone_number: call?.phone_number || '',
+    requirement: call?.requirement || '',
+    details: call?.details || '',
+    urgency: call?.urgency || '中',
+    response_status: call?.response_status || '未対応',
+    summary: call?.summary || '',
+    sentiment: call?.sentiment || 'neutral',
+    satisfaction_score: call?.satisfaction_score || 70,
+    tags: call?.tags || [],
+    action_items: call?.action_items || []
+  });
   const audioRef = useRef<HTMLAudioElement>(null);
   const progressRef = useRef<HTMLDivElement>(null);
 
@@ -176,11 +189,11 @@ export default function CallDetailModal({ call, onClose }: CallDetailModalProps)
 [01:42] お客様: 本当に助かりました。ありがとうございました。
 
 [01:47] AI: こちらこそ、お電話ありがとうございました。良い一日をお過ごしください。失礼いたします。`,
-    summary: call?.summary || call?.call_summary || "製品の不具合に関する問い合わせ。リセットボタンの操作で解決。",
-    sentiment: call?.sentiment || "positive",
-    satisfaction: call?.satisfaction_score || 95,
-    tags: call?.tags || ["製品サポート", "技術的問題", "解決済み"],
-    actionItems: call?.action_items || [],
+    summary: summaryData.summary || call?.summary || call?.call_summary || "製品の不具合に関する問い合わせ。リセットボタンの操作で解決。",
+    sentiment: summaryData.sentiment || call?.sentiment || "positive",
+    satisfaction: summaryData.satisfaction_score || call?.satisfaction_score || 95,
+    tags: summaryData.tags.length > 0 ? summaryData.tags : (call?.tags || ["製品サポート", "技術的問題", "解決済み"]),
+    actionItems: summaryData.action_items.length > 0 ? summaryData.action_items : (call?.action_items || []),
     issueType: localIssueType,
     metadata: call?.metadata || {
       agent_id: call?.agent_id,
@@ -240,8 +253,8 @@ export default function CallDetailModal({ call, onClose }: CallDetailModalProps)
 
       const data = await response.json();
       
-      // Update the local call object with the summarized data
-      Object.assign(call, {
+      // Update the local state with the summarized data
+      setSummaryData({
         customer_name: data.customer_name,
         phone_number: data.phone_number,
         requirement: data.requirement,
@@ -255,11 +268,10 @@ export default function CallDetailModal({ call, onClose }: CallDetailModalProps)
         action_items: data.action_items
       });
       
-      // Force re-render by closing and reopening modal
-      alert('GPT要約が完了しました。情報が更新されました。');
+      // Also update the call object
+      Object.assign(call, data);
       
-      // Close modal to refresh data
-      onClose();
+      alert('GPT要約が完了しました。情報が更新されました。');
       
     } catch (error) {
       console.error('Summarization error:', error);
@@ -573,7 +585,7 @@ export default function CallDetailModal({ call, onClose }: CallDetailModalProps)
           {activeTab === "summary" && (
             <div className="space-y-6">
               {/* GPT要約ボタン */}
-              {(!call?.customer_name || call?.customer_name === '不明') && call?.transcript && (
+              {(!summaryData.customer_name || summaryData.customer_name === '不明') && call?.transcript && (
                 <div className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-xl border-2 border-blue-200 p-6">
                   <div className="flex items-center justify-between">
                     <div>
@@ -665,14 +677,14 @@ export default function CallDetailModal({ call, onClose }: CallDetailModalProps)
                     <p className="text-sm text-gray-500 mb-1">お客様名</p>
                     <div className="flex items-center gap-2">
                       <User size={16} className="text-gray-400" />
-                      <p className="font-medium text-gray-900">{call?.customer_name || '不明'}</p>
+                      <p className="font-medium text-gray-900">{summaryData.customer_name || call?.customer_name || '不明'}</p>
                     </div>
                   </div>
                   <div>
                     <p className="text-sm text-gray-500 mb-1">電話番号</p>
                     <div className="flex items-center gap-2">
                       <Phone size={16} className="text-gray-400" />
-                      <p className="font-medium text-gray-900">{call?.phone_number || callDetails.from}</p>
+                      <p className="font-medium text-gray-900">{summaryData.phone_number || call?.phone_number || callDetails.from}</p>
                     </div>
                   </div>
                   <div>
@@ -683,7 +695,7 @@ export default function CallDetailModal({ call, onClose }: CallDetailModalProps)
                       'bg-green-100 text-green-800'
                     }`}>
                       <AlertCircle size={14} className="mr-1" />
-                      {call?.urgency || '中'}
+                      {summaryData.urgency || call?.urgency || '中'}
                     </span>
                   </div>
                   <div>
@@ -695,7 +707,7 @@ export default function CallDetailModal({ call, onClose }: CallDetailModalProps)
                       'bg-gray-100 text-gray-800'
                     }`}>
                       <Activity size={14} className="mr-1" />
-                      {call?.response_status || '未対応'}
+                      {summaryData.response_status || call?.response_status || '未対応'}
                     </span>
                   </div>
                   <div>
@@ -719,12 +731,12 @@ export default function CallDetailModal({ call, onClose }: CallDetailModalProps)
                 <div className="space-y-4">
                   <div>
                     <p className="text-sm text-gray-500 mb-1">要件</p>
-                    <p className="font-medium text-gray-900">{call?.requirement || callDetails.summary}</p>
+                    <p className="font-medium text-gray-900">{summaryData.requirement || call?.requirement || callDetails.summary}</p>
                   </div>
                   {call?.details && (
                     <div>
                       <p className="text-sm text-gray-500 mb-1">詳細内容</p>
-                      <p className="text-gray-700">{call.details}</p>
+                      <p className="text-gray-700">{summaryData.details || call.details}</p>
                     </div>
                   )}
                 </div>
