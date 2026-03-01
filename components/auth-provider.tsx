@@ -36,9 +36,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
 
   useEffect(() => {
+    // クライアントサイドでのみ実行
+    if (typeof window === 'undefined') {
+      setIsLoading(false);
+      return;
+    }
+
     // ローカルストレージから認証情報を取得
-    const storedToken = typeof window !== 'undefined' ? localStorage.getItem('auth_token') : null;
-    const storedUser = typeof window !== 'undefined' ? localStorage.getItem('user') : null;
+    const storedToken = localStorage.getItem('auth_token');
+    const storedUser = localStorage.getItem('user');
 
     if (storedToken && storedUser) {
       try {
@@ -48,33 +54,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (decoded.expiry > Date.now()) {
           setToken(storedToken);
           setUser(JSON.parse(storedUser));
+          setIsLoading(false);
+          return;
         } else {
           // トークンが期限切れの場合
-          if (typeof window !== 'undefined') {
-            localStorage.removeItem('auth_token');
-            localStorage.removeItem('user');
-          }
-          if (pathname !== '/login') {
-            router.push('/login');
-          }
-        }
-      } catch (error) {
-        console.error('Invalid token:', error);
-        if (typeof window !== 'undefined') {
           localStorage.removeItem('auth_token');
           localStorage.removeItem('user');
         }
-        if (pathname !== '/login') {
-          router.push('/login');
-        }
+      } catch (error) {
+        console.error('Invalid token:', error);
+        localStorage.removeItem('auth_token');
+        localStorage.removeItem('user');
       }
-    } else if (pathname !== '/login') {
-      // 認証情報がない場合
+    }
+
+    // 認証情報がない場合、ログインページ以外ならリダイレクト
+    if (pathname !== '/login') {
       router.push('/login');
     }
 
     setIsLoading(false);
-  }, []); // Remove dependencies to run only once
+  }, [pathname, router]); // pathnameとrouterの変更を監視
 
   const login = (newToken: string, newUser: User) => {
     setToken(newToken);
