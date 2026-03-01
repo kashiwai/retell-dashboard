@@ -32,23 +32,26 @@ export async function POST(request: NextRequest) {
 
 async function handleCallEnded(payload: any) {
   try {
-    // Get LINE token from environment or database
-    const lineToken = process.env.LINE_NOTIFY_TOKEN;
-    
-    if (!lineToken) {
-      console.log('LINE Notify token not configured');
-      return;
-    }
-
     const call = payload.call || payload;
     
-    // Format message
-    const message = formatCallEndedMessage(call);
+    // Try LINE Messaging API first
+    const lineAccessToken = process.env.LINE_CHANNEL_ACCESS_TOKEN;
+    if (lineAccessToken) {
+      await sendLineMessagingNotification(call, false);
+      console.log('LINE Messaging API notification sent for call:', call.call_id);
+    }
     
-    // Send to LINE
-    await sendLineNotification(lineToken, message);
+    // Also try LINE Notify if configured
+    const lineNotifyToken = process.env.LINE_NOTIFY_TOKEN;
+    if (lineNotifyToken) {
+      const message = formatCallEndedMessage(call);
+      await sendLineNotification(lineNotifyToken, message);
+      console.log('LINE Notify notification sent for call:', call.call_id);
+    }
     
-    console.log('LINE notification sent for call:', call.call_id);
+    if (!lineAccessToken && !lineNotifyToken) {
+      console.log('No LINE tokens configured');
+    }
   } catch (error) {
     console.error('Failed to send LINE notification:', error);
   }
@@ -56,22 +59,26 @@ async function handleCallEnded(payload: any) {
 
 async function handleCallAnalyzed(payload: any) {
   try {
-    const lineToken = process.env.LINE_NOTIFY_TOKEN;
-    
-    if (!lineToken) {
-      console.log('LINE Notify token not configured');
-      return;
-    }
-
     const call = payload.call || payload;
     
-    // Format message with analysis
-    const message = formatAnalyzedMessage(call);
+    // Try LINE Messaging API first
+    const lineAccessToken = process.env.LINE_CHANNEL_ACCESS_TOKEN;
+    if (lineAccessToken) {
+      await sendLineMessagingNotification(call, true);
+      console.log('LINE Messaging API analysis sent for call:', call.call_id);
+    }
     
-    // Send to LINE
-    await sendLineNotification(lineToken, message);
+    // Also try LINE Notify if configured
+    const lineNotifyToken = process.env.LINE_NOTIFY_TOKEN;
+    if (lineNotifyToken) {
+      const message = formatAnalyzedMessage(call);
+      await sendLineNotification(lineNotifyToken, message);
+      console.log('LINE Notify analysis sent for call:', call.call_id);
+    }
     
-    console.log('Analysis notification sent for call:', call.call_id);
+    if (!lineAccessToken && !lineNotifyToken) {
+      console.log('No LINE tokens configured');
+    }
   } catch (error) {
     console.error('Failed to send analysis notification:', error);
   }
@@ -153,12 +160,371 @@ ${process.env.NEXT_PUBLIC_APP_URL || 'https://your-app.vercel.app'}/calls/${call
   `.trim();
 }
 
+// Send notification via LINE Messaging API
+async function sendLineMessagingNotification(call: any, isAnalysis: boolean) {
+  const token = process.env.LINE_CHANNEL_ACCESS_TOKEN;
+  if (!token) return;
+  
+  // Broadcast to all friends of the bot
+  const message = isAnalysis ? formatAnalyzedMessageRich(call) : formatCallEndedMessageRich(call);
+  
+  const response = await fetch('https://api.line.me/v2/bot/message/broadcast', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`
+    },
+    body: JSON.stringify({
+      messages: [message]
+    })
+  });
+  
+  if (!response.ok) {
+    const error = await response.text();
+    console.error('LINE Messaging API error:', error);
+  }
+}
+
+function formatCallEndedMessageRich(call: any): any {
+  const duration = call.end_timestamp && call.start_timestamp 
+    ? Math.floor((call.end_timestamp - call.start_timestamp) / 1000)
+    : 0;
+  
+  const minutes = Math.floor(duration / 60);
+  const seconds = duration % 60;
+  
+  return {
+    type: 'flex',
+    altText: '新着通話が完了しました',
+    contents: {
+      type: 'bubble',
+      header: {
+        type: 'box',
+        layout: 'vertical',
+        contents: [
+          {
+            type: 'text',
+            text: '📞 新着通話',
+            size: 'xl',
+            weight: 'bold',
+            color: '#FFFFFF'
+          }
+        ],
+        backgroundColor: '#00B900',
+        paddingAll: '15px'
+      },
+      body: {
+        type: 'box',
+        layout: 'vertical',
+        contents: [
+          {
+            type: 'text',
+            text: '通話が完了しました',
+            size: 'lg',
+            weight: 'bold',
+            margin: 'md'
+          },
+          {
+            type: 'separator',
+            margin: 'lg'
+          },
+          {
+            type: 'box',
+            layout: 'horizontal',
+            contents: [
+              {
+                type: 'text',
+                text: '📱 発信者',
+                size: 'sm',
+                color: '#888888',
+                flex: 0
+              },
+              {
+                type: 'text',
+                text: call.from_number || '不明',
+                size: 'sm',
+                flex: 1,
+                align: 'end'
+              }
+            ],
+            margin: 'lg'
+          },
+          {
+            type: 'box',
+            layout: 'horizontal',
+            contents: [
+              {
+                type: 'text',
+                text: '⏱️ 通話時間',
+                size: 'sm',
+                color: '#888888',
+                flex: 0
+              },
+              {
+                type: 'text',
+                text: `${minutes}分${seconds}秒`,
+                size: 'sm',
+                flex: 1,
+                align: 'end'
+              }
+            ],
+            margin: 'md'
+          },
+          {
+            type: 'box',
+            layout: 'horizontal',
+            contents: [
+              {
+                type: 'text',
+                text: '📅 日時',
+                size: 'sm',
+                color: '#888888',
+                flex: 0
+              },
+              {
+                type: 'text',
+                text: new Date(call.start_timestamp || Date.now()).toLocaleString('ja-JP', { 
+                  timeZone: 'Asia/Tokyo',
+                  month: 'numeric',
+                  day: 'numeric',
+                  hour: '2-digit',
+                  minute: '2-digit'
+                }),
+                size: 'sm',
+                flex: 1,
+                align: 'end'
+              }
+            ],
+            margin: 'md'
+          }
+        ]
+      },
+      footer: {
+        type: 'box',
+        layout: 'vertical',
+        contents: [
+          {
+            type: 'text',
+            text: '分析完了後、詳細情報をお送りします',
+            size: 'xs',
+            color: '#888888',
+            align: 'center'
+          }
+        ],
+        paddingAll: '10px'
+      }
+    }
+  };
+}
+
+function formatAnalyzedMessageRich(call: any): any {
+  const analysis = call.call_analysis || {};
+  const customAnalysis = analysis.custom_analysis || {};
+  
+  const urgencyColor = {
+    '高': '#FF0000',
+    '中': '#FFA500',
+    '低': '#00AA00'
+  };
+  
+  const urgencyEmoji = {
+    '高': '🔴',
+    '中': '🟡',
+    '低': '🟢'
+  };
+  
+  const sentimentEmoji = {
+    'positive': '😊',
+    'neutral': '😐',
+    'negative': '😔'
+  };
+  
+  return {
+    type: 'flex',
+    altText: '通話分析が完了しました',
+    contents: {
+      type: 'bubble',
+      header: {
+        type: 'box',
+        layout: 'vertical',
+        contents: [
+          {
+            type: 'text',
+            text: '📊 通話分析完了',
+            size: 'xl',
+            weight: 'bold',
+            color: '#FFFFFF'
+          }
+        ],
+        backgroundColor: '#0084FF',
+        paddingAll: '15px'
+      },
+      body: {
+        type: 'box',
+        layout: 'vertical',
+        contents: [
+          {
+            type: 'text',
+            text: '要約',
+            size: 'sm',
+            color: '#888888',
+            margin: 'md'
+          },
+          {
+            type: 'text',
+            text: analysis.summary || '要約なし',
+            size: 'sm',
+            wrap: true,
+            margin: 'sm'
+          },
+          {
+            type: 'separator',
+            margin: 'lg'
+          },
+          ...(customAnalysis.customer_name ? [{
+            type: 'box' as const,
+            layout: 'horizontal' as const,
+            contents: [
+              {
+                type: 'text',
+                text: '👤 お客様',
+                size: 'sm',
+                color: '#888888',
+                flex: 0
+              },
+              {
+                type: 'text',
+                text: customAnalysis.customer_name,
+                size: 'sm',
+                flex: 1,
+                align: 'end'
+              }
+            ],
+            margin: 'md' as const
+          }] : []),
+          ...(customAnalysis.phone_number ? [{
+            type: 'box' as const,
+            layout: 'horizontal' as const,
+            contents: [
+              {
+                type: 'text',
+                text: '📱 電話番号',
+                size: 'sm',
+                color: '#888888',
+                flex: 0
+              },
+              {
+                type: 'text',
+                text: customAnalysis.phone_number,
+                size: 'sm',
+                flex: 1,
+                align: 'end'
+              }
+            ],
+            margin: 'md' as const
+          }] : []),
+          ...(customAnalysis.requirement ? [{
+            type: 'box' as const,
+            layout: 'horizontal' as const,
+            contents: [
+              {
+                type: 'text',
+                text: '📋 要件',
+                size: 'sm',
+                color: '#888888',
+                flex: 0
+              },
+              {
+                type: 'text',
+                text: customAnalysis.requirement,
+                size: 'sm',
+                flex: 1,
+                align: 'end'
+              }
+            ],
+            margin: 'md' as const
+          }] : []),
+          {
+            type: 'box',
+            layout: 'horizontal',
+            contents: [
+              {
+                type: 'text',
+                text: '⚡ 緊急度',
+                size: 'sm',
+                color: '#888888',
+                flex: 0
+              },
+              {
+                type: 'text',
+                text: `${urgencyEmoji[customAnalysis.urgency as keyof typeof urgencyEmoji] || '🟢'} ${customAnalysis.urgency || '低'}`,
+                size: 'sm',
+                flex: 1,
+                align: 'end',
+                color: urgencyColor[customAnalysis.urgency as keyof typeof urgencyColor] || '#00AA00'
+              }
+            ],
+            margin: 'md'
+          },
+          {
+            type: 'box',
+            layout: 'horizontal',
+            contents: [
+              {
+                type: 'text',
+                text: '😊 感情',
+                size: 'sm',
+                color: '#888888',
+                flex: 0
+              },
+              {
+                type: 'text',
+                text: `${sentimentEmoji[analysis.sentiment as keyof typeof sentimentEmoji] || '😐'} ${
+                  analysis.sentiment === 'positive' ? 'ポジティブ' :
+                  analysis.sentiment === 'negative' ? 'ネガティブ' : '中立'
+                }`,
+                size: 'sm',
+                flex: 1,
+                align: 'end'
+              }
+            ],
+            margin: 'md'
+          }
+        ]
+      },
+      footer: {
+        type: 'box',
+        layout: 'vertical',
+        contents: [
+          {
+            type: 'button',
+            action: {
+              type: 'uri',
+              label: '詳細を確認',
+              uri: `${process.env.NEXT_PUBLIC_APP_URL || 'https://your-app.vercel.app'}/calls/${call.call_id}`
+            },
+            style: 'primary',
+            color: '#0084FF'
+          }
+        ],
+        spacing: 'sm',
+        paddingAll: '10px'
+      }
+    }
+  };
+}
+
 // GET endpoint to check webhook status
 export async function GET() {
   return NextResponse.json({
     status: 'active',
     endpoint: '/api/webhook/retell',
     events: ['call_ended', 'call_analyzed'],
-    lineNotifyConfigured: !!process.env.LINE_NOTIFY_TOKEN
+    lineNotifyConfigured: !!process.env.LINE_NOTIFY_TOKEN,
+    lineMessagingConfigured: !!process.env.LINE_CHANNEL_ACCESS_TOKEN,
+    lineBotInfo: process.env.LINE_CHANNEL_ACCESS_TOKEN ? {
+      displayName: 'Call_Sheep01',
+      basicId: '@818rmott'
+    } : null
   });
 }
