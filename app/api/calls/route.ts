@@ -41,19 +41,20 @@ export async function GET(request: NextRequest) {
       let satisfactionScore = 70;
       let tags: string[] = [];
       let actionItems: string[] = [];
+      let detailedInfo = null;
       
       if (transcript && !summary) {
         try {
-          // Call GPT API for summary
-          const summaryRes = await fetch(`${request.nextUrl.origin}/api/summarize`, {
+          // Call GPT API for detailed analysis
+          const detailedRes = await fetch(`${request.nextUrl.origin}/api/summarize`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ transcript, type: 'summary' })
+            body: JSON.stringify({ transcript, type: 'detailed' })
           });
           
-          if (summaryRes.ok) {
-            const summaryData = await summaryRes.json();
-            summary = summaryData.summary;
+          if (detailedRes.ok) {
+            detailedInfo = await detailedRes.json();
+            summary = detailedInfo.summary || detailedInfo.requirement;
           }
           
           // Get sentiment analysis
@@ -137,6 +138,13 @@ export async function GET(request: NextRequest) {
         tags: tags,
         issue_type: issueType,
         action_items: actionItems,
+        // 詳細情報を追加
+        customer_name: detailedInfo?.customer_name || '不明',
+        phone_number: detailedInfo?.phone_number || '',
+        requirement: detailedInfo?.requirement || summary,
+        details: detailedInfo?.details || '',
+        urgency: detailedInfo?.urgency || '中',
+        response_status: detailedInfo?.status || '未対応',
         metadata: {
           agent_id: call.agent_id,
           agent_name: call.agent_name || 'AI受付',

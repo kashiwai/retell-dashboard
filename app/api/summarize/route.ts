@@ -51,6 +51,26 @@ export async function POST(request: NextRequest) {
         userPrompt = `以下の通話記録から、対応が必要なアクションアイテムを抽出してください。箇条書きで返してください：\n\n${transcript}`;
         break;
       
+      case 'detailed':
+        systemPrompt = `あなたは日本語の通話内容を詳細に分析する専門家です。重要な情報を正確に抽出してください。`;
+        userPrompt = `以下の通話記録を分析して、次の情報を抽出してください：
+
+${transcript}
+
+必ず以下の形式で回答してください：
+電話番号: [通話中に言及された電話番号、なければ「不明」]
+名前: [お客様の名前、なければ「不明」]
+要件: [主な要件・用件を50文字以内で要約]
+詳細: [詳細な内容を100文字以内で要約]
+緊急度: [高/中/低のいずれか]
+対応状況: [解決済み/対応中/保留/未対応のいずれか]
+
+緊急度の判断基準：
+- 高: 至急、緊急、今すぐ、大至急などの言葉がある、または深刻な問題
+- 中: 早めに、なるべく早く、できれば今日中などの言葉がある
+- 低: 特に急ぎではない、時間がある時で良い`;
+        break;
+      
       default:
         systemPrompt = `あなたは日本語の通話内容を分析する専門家です。`;
         userPrompt = transcript;
@@ -98,6 +118,26 @@ export async function POST(request: NextRequest) {
           action_items: result.split('\n')
             .filter(line => line.trim().length > 0)
             .map(line => line.replace(/^[-•*]\s*/, ''))
+        };
+        break;
+      
+      case 'detailed':
+        const detailLines = result.split('\n');
+        const phoneNumberLine = detailLines.find(l => l.includes('電話番号:'));
+        const nameLine = detailLines.find(l => l.includes('名前:'));
+        const requirementLine = detailLines.find(l => l.includes('要件:'));
+        const detailLine = detailLines.find(l => l.includes('詳細:'));
+        const urgencyLine = detailLines.find(l => l.includes('緊急度:'));
+        const statusLine = detailLines.find(l => l.includes('対応状況:'));
+        
+        response = {
+          phone_number: phoneNumberLine?.replace(/.*:\s*/, '').trim() || '不明',
+          customer_name: nameLine?.replace(/.*:\s*/, '').trim() || '不明',
+          requirement: requirementLine?.replace(/.*:\s*/, '').trim() || '不明',
+          details: detailLine?.replace(/.*:\s*/, '').trim() || '',
+          urgency: urgencyLine?.replace(/.*:\s*/, '').trim() || '中',
+          status: statusLine?.replace(/.*:\s*/, '').trim() || '未対応',
+          summary: requirementLine?.replace(/.*:\s*/, '').trim() || '通話内容の要約'
         };
         break;
       

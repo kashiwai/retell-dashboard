@@ -586,18 +586,41 @@ export default function CallDetailModal({ call, onClose }: CallDetailModalProps)
                 <h3 className="text-lg font-bold text-gray-900 mb-4">通話情報</h3>
                 <div className="grid md:grid-cols-2 gap-4">
                   <div>
-                    <p className="text-sm text-gray-500 mb-1">発信元</p>
+                    <p className="text-sm text-gray-500 mb-1">お客様名</p>
                     <div className="flex items-center gap-2">
-                      <Phone size={16} className="text-gray-400" />
-                      <p className="font-medium text-gray-900">{callDetails.from}</p>
+                      <User size={16} className="text-gray-400" />
+                      <p className="font-medium text-gray-900">{call?.customer_name || '不明'}</p>
                     </div>
                   </div>
                   <div>
-                    <p className="text-sm text-gray-500 mb-1">着信先</p>
+                    <p className="text-sm text-gray-500 mb-1">電話番号</p>
                     <div className="flex items-center gap-2">
                       <Phone size={16} className="text-gray-400" />
-                      <p className="font-medium text-gray-900">{callDetails.to}</p>
+                      <p className="font-medium text-gray-900">{call?.phone_number || callDetails.from}</p>
                     </div>
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-500 mb-1">緊急度</p>
+                    <span className={`inline-flex px-3 py-1 text-sm font-semibold rounded-full ${
+                      call?.urgency === '高' ? 'bg-red-100 text-red-800' :
+                      call?.urgency === '中' ? 'bg-yellow-100 text-yellow-800' :
+                      'bg-green-100 text-green-800'
+                    }`}>
+                      <AlertCircle size={14} className="mr-1" />
+                      {call?.urgency || '中'}
+                    </span>
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-500 mb-1">対応状況</p>
+                    <span className={`inline-flex px-3 py-1 text-sm font-semibold rounded-full ${
+                      call?.response_status === '解決済み' ? 'bg-green-100 text-green-800' :
+                      call?.response_status === '対応中' ? 'bg-blue-100 text-blue-800' :
+                      call?.response_status === '保留' ? 'bg-yellow-100 text-yellow-800' :
+                      'bg-gray-100 text-gray-800'
+                    }`}>
+                      <Activity size={14} className="mr-1" />
+                      {call?.response_status || '未対応'}
+                    </span>
                   </div>
                   <div>
                     <p className="text-sm text-gray-500 mb-1">開始時刻</p>
@@ -606,11 +629,28 @@ export default function CallDetailModal({ call, onClose }: CallDetailModalProps)
                     </p>
                   </div>
                   <div>
-                    <p className="text-sm text-gray-500 mb-1">終了時刻</p>
+                    <p className="text-sm text-gray-500 mb-1">通話時間</p>
                     <p className="font-medium text-gray-900">
-                      {formatDate(callDetails.endTime)}
+                      {formatTime(callDetails.duration)}
                     </p>
                   </div>
+                </div>
+              </div>
+
+              {/* 要件詳細 */}
+              <div className="bg-white rounded-xl border-2 border-gray-100 p-6">
+                <h3 className="text-lg font-bold text-gray-900 mb-4">要件詳細</h3>
+                <div className="space-y-4">
+                  <div>
+                    <p className="text-sm text-gray-500 mb-1">要件</p>
+                    <p className="font-medium text-gray-900">{call?.requirement || callDetails.summary}</p>
+                  </div>
+                  {call?.details && (
+                    <div>
+                      <p className="text-sm text-gray-500 mb-1">詳細内容</p>
+                      <p className="text-gray-700">{call.details}</p>
+                    </div>
+                  )}
                 </div>
               </div>
 

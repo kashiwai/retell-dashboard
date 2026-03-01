@@ -494,34 +494,41 @@ export default function ModernDashboard() {
                 <table className="w-full">
                   <thead className="bg-gray-50 border-b">
                     <tr>
-                      <th className="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">時刻</th>
-                      <th className="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">発信者</th>
-                      <th className="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">要約</th>
-                      <th className="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">時間</th>
-                      <th className="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">感情</th>
-                      <th className="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">状態</th>
-                      <th className="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider"></th>
+                      <th className="px-4 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">時刻</th>
+                      <th className="px-4 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">お客様</th>
+                      <th className="px-4 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">電話番号</th>
+                      <th className="px-4 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">要件</th>
+                      <th className="px-4 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">緊急度</th>
+                      <th className="px-4 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">時間</th>
+                      <th className="px-4 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">状態</th>
+                      <th className="px-4 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider"></th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-100">
                     {calls.map((call) => (
                       <tr key={call.id} className="hover:bg-gray-50 transition-colors">
-                        <td className="px-6 py-4 text-sm text-gray-900">{call.time}</td>
-                        <td className="px-6 py-4 text-sm text-gray-900">{call.from || "不明"}</td>
-                        <td className="px-6 py-4 text-sm text-gray-500 max-w-xs truncate">{call.summary || "-"}</td>
-                        <td className="px-6 py-4 text-sm text-gray-900">{call.duration}</td>
-                        <td className="px-6 py-4">
-                          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                            call.sentiment === "positive" ? "bg-green-100 text-green-800" :
-                            call.sentiment === "negative" ? "bg-red-100 text-red-800" :
-                            "bg-gray-100 text-gray-800"
+                        <td className="px-4 py-3 text-sm text-gray-900">{call.time}</td>
+                        <td className="px-4 py-3 text-sm font-medium text-gray-900">{call.customer_name || "不明"}</td>
+                        <td className="px-4 py-3 text-sm text-gray-600">{call.phone_number || call.from || "-"}</td>
+                        <td className="px-4 py-3 text-sm text-gray-700 max-w-xs truncate">{call.requirement || call.summary || "-"}</td>
+                        <td className="px-4 py-3">
+                          <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold ${
+                            call.urgency === "高" ? "bg-red-100 text-red-700" :
+                            call.urgency === "中" ? "bg-yellow-100 text-yellow-700" :
+                            "bg-green-100 text-green-700"
                           }`}>
-                            {call.sentiment === "positive" ? "😊" : call.sentiment === "negative" ? "😔" : "😐"}
+                            {call.urgency || "中"}
                           </span>
                         </td>
-                        <td className="px-6 py-4">
-                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                            完了
+                        <td className="px-4 py-3 text-sm text-gray-900">{call.duration}</td>
+                        <td className="px-4 py-3">
+                          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                            call.response_status === "解決済み" ? "bg-green-100 text-green-800" :
+                            call.response_status === "対応中" ? "bg-blue-100 text-blue-800" :
+                            call.response_status === "保留" ? "bg-yellow-100 text-yellow-800" :
+                            "bg-gray-100 text-gray-800"
+                          }`}>
+                            {call.response_status || "未対応"}
                           </span>
                         </td>
                         <td className="px-6 py-4">
