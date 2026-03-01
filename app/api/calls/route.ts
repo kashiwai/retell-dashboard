@@ -35,6 +35,14 @@ export async function GET(request: NextRequest) {
       const transcript = call.transcript || '';
       const duration = (call.end_timestamp || 0) - (call.start_timestamp || 0);
       
+      // Log the call data for debugging
+      console.log('Processing call:', {
+        call_id: call.call_id,
+        has_call_analysis: !!call.call_analysis,
+        summary_preview: call.call_analysis?.summary?.substring(0, 100),
+        custom_analysis: call.call_analysis?.custom_analysis
+      });
+      
       // Use Retell API's summary and custom_analysis directly
       let summary = call.call_analysis?.summary || '';
       let customAnalysis = call.call_analysis?.custom_analysis || {};

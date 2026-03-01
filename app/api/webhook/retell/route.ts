@@ -40,8 +40,13 @@ export async function POST(request: NextRequest) {
     
     console.log('Retell webhook payload:', payload);
 
-    // Check event type
-    const eventType = payload.event || payload.type;
+    // Check event type - Retell uses different formats
+    const eventType = payload.event || payload.type || payload.event_type;
+    
+    console.log('=== RETELL WEBHOOK EVENT ===');
+    console.log('Event type:', eventType);
+    console.log('Full payload:', JSON.stringify(payload, null, 2));
+    console.log('===========================');
     
     // Handle test webhook from Retell
     if (eventType === 'test' || eventType === 'webhook.test' || payload.test === true) {
@@ -53,12 +58,15 @@ export async function POST(request: NextRequest) {
       });
     }
     
-    if (eventType === 'call_ended' || eventType === 'call.ended') {
-      // Call ended event - send LINE notification
+    // Handle various event formats from Retell
+    if (eventType === 'call_ended' || eventType === 'call.ended' || eventType === 'end_of_call') {
+      console.log('Processing call_ended event');
       await handleCallEnded(payload);
-    } else if (eventType === 'call_analyzed' || eventType === 'call.analyzed') {
-      // Call analysis completed - send updated notification
+    } else if (eventType === 'call_analyzed' || eventType === 'call.analyzed' || eventType === 'analysis_completed' || eventType === 'post_call_analysis_completed') {
+      console.log('Processing call_analyzed event with summary');
       await handleCallAnalyzed(payload);
+    } else {
+      console.log(`Unknown event type: ${eventType}`);
     }
 
     const response = NextResponse.json({ 
@@ -118,7 +126,20 @@ async function handleCallEnded(payload: any) {
 
 async function handleCallAnalyzed(payload: any) {
   try {
-    const call = payload.call || payload;
+    console.log('=== HANDLING CALL ANALYZED ===');
+    console.log('Payload structure:', JSON.stringify(payload, null, 2));
+    
+    // Extract call data - Retell may use different structures
+    const call = payload.call || payload.data || payload;
+    
+    // Log what we found
+    console.log('Call data extracted:', {
+      call_id: call.call_id,
+      has_call_analysis: !!call.call_analysis,
+      has_summary: !!call.call_analysis?.summary,
+      has_custom_analysis: !!call.call_analysis?.custom_analysis,
+      summary_preview: call.call_analysis?.summary?.substring(0, 100)
+    });
     
     // Try LINE Messaging API first
     const lineAccessToken = process.env.LINE_CHANNEL_ACCESS_TOKEN;
