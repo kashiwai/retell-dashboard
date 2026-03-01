@@ -82,14 +82,30 @@ export async function POST(request: NextRequest) {
     message += `🔗 通話ID: ${call_id}\n`;
     message += `📅 送信日時: ${new Date().toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' })}`;
 
-    // Send to LINE
-    const lineResponse = await fetch('https://api.line.me/v2/bot/broadcast', {
+    // Get user ID from environment variable
+    // User must first add the bot as a friend and set their user ID in .env.local
+    const userId = process.env.LINE_USER_ID;
+    
+    if (!userId) {
+      console.error('LINE_USER_ID not configured. Please follow the setup guide at LINE_SETUP_GUIDE.md');
+      return NextResponse.json(
+        { 
+          error: 'LINE送信先が設定されていません', 
+          details: 'LINE_USER_IDを環境変数に設定してください。詳細はLINE_SETUP_GUIDE.mdを参照してください。'
+        },
+        { status: 400 }
+      );
+    }
+    
+    // Send to LINE using push message (to specific user)
+    const lineResponse = await fetch('https://api.line.me/v2/bot/message/push', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${lineAccessToken}`,
       },
       body: JSON.stringify({
+        to: userId,
         messages: [
           {
             type: 'text',
@@ -102,8 +118,27 @@ export async function POST(request: NextRequest) {
     if (!lineResponse.ok) {
       const errorText = await lineResponse.text();
       console.error('LINE API error:', errorText);
+      
+      let errorMessage = 'LINE送信に失敗しました';
+      let solution = '';
+      
+      if (errorText.includes("You can't send messages to yourself")) {
+        errorMessage = 'ボット自身にメッセージを送信することはできません';
+        solution = 'LINE_USER_IDに友だち追加したユーザーのIDを設定してください';
+      } else if (errorText.includes('Not found')) {
+        errorMessage = '送信先ユーザーが見つかりません';
+        solution = 'LINE Botを友だち追加し、正しいユーザーIDを設定してください';
+      } else if (errorText.includes('Invalid reply token')) {
+        errorMessage = 'トークンが無効です';
+        solution = 'LINE_CHANNEL_ACCESS_TOKENを確認してください';
+      }
+      
       return NextResponse.json(
-        { error: 'Failed to send LINE notification', details: errorText },
+        { 
+          error: errorMessage,
+          details: errorText,
+          solution: solution
+        },
         { status: lineResponse.status }
       );
     }

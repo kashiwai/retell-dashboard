@@ -245,16 +245,24 @@ async function sendLineMessagingNotification(call: any, isAnalysis: boolean) {
   const token = process.env.LINE_CHANNEL_ACCESS_TOKEN;
   if (!token) return;
   
-  // Broadcast to all friends of the bot
+  // Get user ID from environment variable
+  const userId = process.env.LINE_USER_ID;
+  if (!userId) {
+    console.error('LINE_USER_ID not configured. Skipping LINE notification.');
+    console.error('Please follow the setup guide at LINE_SETUP_GUIDE.md');
+    return;
+  }
+  
   const message = isAnalysis ? formatAnalyzedMessageRich(call) : formatCallEndedMessageRich(call);
   
-  const response = await fetch('https://api.line.me/v2/bot/message/broadcast', {
+  const response = await fetch('https://api.line.me/v2/bot/message/push', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
       'Authorization': `Bearer ${token}`
     },
     body: JSON.stringify({
+      to: userId,
       messages: [message]
     })
   });
@@ -262,6 +270,9 @@ async function sendLineMessagingNotification(call: any, isAnalysis: boolean) {
   if (!response.ok) {
     const error = await response.text();
     console.error('LINE Messaging API error:', error);
+    if (error.includes("You can't send messages to yourself")) {
+      console.error('Error: Bot cannot send messages to itself. Please use a valid user ID from a friend account.');
+    }
   }
 }
 
