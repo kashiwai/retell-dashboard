@@ -236,6 +236,14 @@ export default function AgentConfigJapanese({ agentId, onClose, onSave }: AgentC
         if (res.ok) {
           const agentData = await res.json();
           
+          // Debug log
+          console.log('Loaded agent data:', {
+            agent_name: agentData.agent_name,
+            has_script: !!agentData.script,
+            script_keys: agentData.script ? Object.keys(agentData.script) : [],
+            script_main_prompt_length: agentData.script?.main_prompt?.length
+          });
+          
           // Only update with actual data from API - no defaults
           setConfig(prevConfig => {
             const newConfig = { ...prevConfig };
@@ -252,16 +260,24 @@ export default function AgentConfigJapanese({ agentId, onClose, onSave }: AgentC
             
             // Update script data - check multiple possible fields
             if (agentData.script) {
-              // If script object exists, use it
-              newConfig.script = agentData.script;
+              // If script object exists, use it directly
+              console.log('Setting script from API:', agentData.script);
+              newConfig.script = {
+                greeting: agentData.script.greeting || '',
+                main_prompt: agentData.script.main_prompt || '',
+                ending: agentData.script.ending || '',
+                hold_message: agentData.script.hold_message || '',
+                voicemail: agentData.script.voicemail || ''
+              };
             } else if (agentData.prompt || agentData.general_prompt || agentData.begin_message) {
               // Otherwise, construct from individual fields
+              console.log('Constructing script from individual fields');
               newConfig.script = {
-                greeting: agentData.begin_message || prevConfig.script.greeting,
-                main_prompt: agentData.prompt || agentData.general_prompt || prevConfig.script.main_prompt,
-                ending: agentData.end_message || prevConfig.script.ending,
-                hold_message: prevConfig.script.hold_message,
-                voicemail: prevConfig.script.voicemail
+                greeting: agentData.begin_message || '',
+                main_prompt: agentData.prompt || agentData.general_prompt || '',
+                ending: agentData.end_message || '',
+                hold_message: '',
+                voicemail: ''
               };
             }
             

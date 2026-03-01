@@ -42,6 +42,7 @@ export default function CallDetailModal({ call, onClose }: CallDetailModalProps)
   // Format date
   const formatDate = (date: string) => {
     return new Date(date).toLocaleString('ja-JP', {
+      timeZone: 'Asia/Tokyo',
       year: 'numeric',
       month: 'long',
       day: 'numeric',

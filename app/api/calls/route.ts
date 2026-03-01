@@ -159,6 +159,7 @@ export async function GET(request: NextRequest) {
 function formatTime(timestamp: number) {
   const date = new Date(timestamp);
   return date.toLocaleTimeString('ja-JP', { 
+    timeZone: 'Asia/Tokyo',
     hour: '2-digit', 
     minute: '2-digit' 
   });
