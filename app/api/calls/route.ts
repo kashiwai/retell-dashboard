@@ -27,23 +27,88 @@ export async function GET(request: NextRequest) {
     // Limit to the requested number
     const limitedCalls = calls.slice(0, limit);
     
-    const formattedCalls = limitedCalls.map(call => {
+    // Process calls with GPT summarization
+    const formattedCalls = await Promise.all(limitedCalls.map(async (call) => {
       // Type-safe property access
       const phoneCall = call as any;
       const analysis = call.call_analysis as any;
       const transcript = call.transcript || '';
       const duration = (call.end_timestamp || 0) - (call.start_timestamp || 0);
       
-      // Generate summary from transcript if not available
-      const summary = analysis?.summary || generateSummary(transcript);
+      // Try to get GPT-generated summary if transcript exists
+      let summary = analysis?.summary;
+      let sentiment = analysis?.sentiment_score ? categorizeSentiment(analysis.sentiment_score) : 'neutral';
+      let satisfactionScore = 70;
+      let tags = [];
+      let actionItems = [];
       
-      // Analyze sentiment from transcript
-      const sentiment = analysis?.sentiment_score 
-        ? categorizeSentiment(analysis.sentiment_score)
-        : analyzeSentiment(transcript);
-      
-      // Generate tags based on content
-      const tags = generateTags(transcript, summary);
+      if (transcript && !summary) {
+        try {
+          // Call GPT API for summary
+          const summaryRes = await fetch(`${request.nextUrl.origin}/api/summarize`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ transcript, type: 'summary' })
+          });
+          
+          if (summaryRes.ok) {
+            const summaryData = await summaryRes.json();
+            summary = summaryData.summary;
+          }
+          
+          // Get sentiment analysis
+          const sentimentRes = await fetch(`${request.nextUrl.origin}/api/summarize`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ transcript, type: 'sentiment' })
+          });
+          
+          if (sentimentRes.ok) {
+            const sentimentData = await sentimentRes.json();
+            sentiment = sentimentData.sentiment || 'neutral';
+            satisfactionScore = sentimentData.satisfaction_score || 70;
+          }
+          
+          // Get tags
+          const tagsRes = await fetch(`${request.nextUrl.origin}/api/summarize`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ transcript, type: 'tags' })
+          });
+          
+          if (tagsRes.ok) {
+            const tagsData = await tagsRes.json();
+            tags = tagsData.tags || [];
+          }
+          
+          // Get action items
+          const actionsRes = await fetch(`${request.nextUrl.origin}/api/summarize`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ transcript, type: 'action_items' })
+          });
+          
+          if (actionsRes.ok) {
+            const actionsData = await actionsRes.json();
+            actionItems = actionsData.action_items || [];
+          }
+        } catch (error) {
+          console.error('GPT summarization error:', error);
+          // Fall back to basic summarization
+          summary = generateSummary(transcript);
+          sentiment = analyzeSentiment(transcript);
+          satisfactionScore = calculateSatisfaction(sentiment, transcript);
+          tags = generateTags(transcript, summary);
+          actionItems = extractActionItems(transcript);
+        }
+      } else {
+        // Use fallback methods if no transcript or summary already exists
+        summary = summary || generateSummary(transcript);
+        sentiment = sentiment || analyzeSentiment(transcript);
+        satisfactionScore = calculateSatisfaction(sentiment, transcript);
+        tags = generateTags(transcript, summary);
+        actionItems = extractActionItems(transcript);
+      }
       
       // Extract issue type from conversation
       const issueType = extractIssueType(transcript);
@@ -63,7 +128,7 @@ export async function GET(request: NextRequest) {
         status: mapCallStatus(call.call_status || 'unknown'),
         call_status: call.call_status,
         sentiment: sentiment,
-        satisfaction_score: calculateSatisfaction(sentiment, transcript),
+        satisfaction_score: satisfactionScore,
         summary: summary,
         purpose: analysis?.intent || issueType.category || 'お問い合わせ',
         transcript: transcript,
@@ -71,7 +136,7 @@ export async function GET(request: NextRequest) {
         analysis: analysis || null,
         tags: tags,
         issue_type: issueType,
-        action_items: extractActionItems(transcript),
+        action_items: actionItems,
         metadata: {
           agent_id: call.agent_id,
           agent_name: call.agent_name || 'AI受付',
@@ -79,7 +144,7 @@ export async function GET(request: NextRequest) {
           disconnection_reason: call.disconnection_reason
         }
       };
-    });
+    }));
 
     return NextResponse.json(formattedCalls);
   } catch (error: any) {

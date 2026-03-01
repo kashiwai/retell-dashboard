@@ -28,6 +28,34 @@ export async function GET(request: NextRequest, props: Params) {
 
     const agent = await retellClient.agent.retrieve(agentId) as any;
     
+    // Log to see the actual agent structure (for debugging)
+    console.log('Retrieved agent data:', {
+      agent_id: agent.agent_id,
+      has_prompt: !!agent.prompt,
+      has_general_prompt: !!agent.general_prompt,
+      has_begin_message: !!agent.begin_message,
+      has_metadata: !!agent.metadata,
+      metadata_keys: agent.metadata ? Object.keys(agent.metadata) : []
+    });
+    
+    // Extract script data - check different possible locations
+    let script = null;
+    
+    // Check if script is in metadata
+    if (agent.metadata?.script) {
+      script = agent.metadata.script;
+    }
+    // Check if there's a prompt field (common in Retell agents)
+    else if (agent.prompt || agent.general_prompt) {
+      script = {
+        greeting: agent.begin_message || '',
+        main_prompt: agent.prompt || agent.general_prompt || '',
+        ending: agent.end_message || '',
+        hold_message: '',
+        voicemail: ''
+      };
+    }
+    
     return NextResponse.json({
       agent_id: agent.agent_id,
       agent_name: agent.agent_name,
@@ -36,17 +64,17 @@ export async function GET(request: NextRequest, props: Params) {
       llm_websocket_url: agent.llm_websocket_url,
       response_engine: agent.response_engine,
       
-      // Voice settings
-      voice_temperature: agent.voice_temperature || 0.7,
-      voice_speed: agent.voice_speed || 1.0,
-      volume: agent.volume || 1.0,
+      // Voice settings - only return actual values
+      voice_temperature: agent.voice_temperature,
+      voice_speed: agent.voice_speed,
+      volume: agent.volume,
       
       // Interaction settings
       enable_backchannel: agent.enable_backchannel,
       backchannel_frequency: agent.backchannel_frequency,
-      backchannel_words: agent.backchannel_words || [],
+      backchannel_words: agent.backchannel_words,
       
-      interruption_sensitivity: agent.interruption_sensitivity || 0.5,
+      interruption_sensitivity: agent.interruption_sensitivity,
       reminder_trigger_ms: agent.reminder_trigger_ms,
       reminder_max_count: agent.reminder_max_count,
       
@@ -55,15 +83,16 @@ export async function GET(request: NextRequest, props: Params) {
       enable_recording: agent.enable_recording,
       metadata: agent.metadata || {},
       
-      // Custom fields for Japanese settings
-      script: agent.metadata?.script || {
-        greeting: '',
-        main_prompt: '',
-        ending: '',
-        hold_message: '',
-        voicemail: ''
-      },
-      settings: agent.metadata?.settings || {}
+      // Return actual script data if found
+      script: script,
+      
+      // Include original prompt fields for reference
+      prompt: agent.prompt,
+      general_prompt: agent.general_prompt,
+      begin_message: agent.begin_message,
+      end_message: agent.end_message,
+      
+      settings: agent.metadata?.settings
     });
     
   } catch (error: any) {

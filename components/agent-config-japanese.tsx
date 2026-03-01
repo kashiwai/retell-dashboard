@@ -237,51 +237,68 @@ export default function AgentConfigJapanese({ agentId, onClose, onSave }: AgentC
           const agentData = await res.json();
           
           // Only update with actual data from API - no defaults
-          setConfig(prevConfig => ({
-            ...prevConfig,
-            general: {
-              ...prevConfig.general,
-              ...(agentData.agent_name && { name: agentData.agent_name }),
-              ...(agentData.voice_id && { voice_id: agentData.voice_id }),
-              ...(agentData.language && { language: agentData.language }),
-              ...(agentData.voice_speed !== undefined && { voice_speed: agentData.voice_speed }),
-              ...(agentData.voice_temperature !== undefined && { 
-                voice_pitch: agentData.voice_temperature,
-                voice_temperature: agentData.voice_temperature 
-              })
-            },
-            ...(agentData.script && { script: agentData.script }),
-            conversation: {
-              ...prevConfig.conversation,
-              ...(agentData.interruption_sensitivity !== undefined && { 
-                interruption_sensitivity: agentData.interruption_sensitivity 
-              }),
-              ...(agentData.enable_backchannel !== undefined && { 
-                enable_backchanneling: agentData.enable_backchannel 
-              }),
-              ...(agentData.backchannel_frequency !== undefined && { 
-                backchannel_frequency: agentData.backchannel_frequency 
-              }),
-              ...(agentData.backchannel_words?.length > 0 && { 
-                backchannel_words: agentData.backchannel_words 
-              }),
-              ...(agentData.reminder_trigger_ms !== undefined && { 
-                reminder_enabled: agentData.reminder_trigger_ms > 0,
-                reminder_interval: agentData.reminder_trigger_ms / 1000
-              }),
-              ...(agentData.reminder_max_count !== undefined && { 
-                reminder_max_count: agentData.reminder_max_count 
-              })
-            },
-            notifications: {
-              ...prevConfig.notifications,
-              ...(agentData.webhook_url && { 
-                webhook_enabled: true,
-                webhook_url: agentData.webhook_url 
-              })
-            },
-            ...(agentData.settings && agentData.settings)
-          }));
+          setConfig(prevConfig => {
+            const newConfig = { ...prevConfig };
+            
+            // Update general settings
+            if (agentData.agent_name) newConfig.general.name = agentData.agent_name;
+            if (agentData.voice_id) newConfig.general.voice_id = agentData.voice_id;
+            if (agentData.language) newConfig.general.language = agentData.language;
+            if (agentData.voice_speed !== undefined) newConfig.general.voice_speed = agentData.voice_speed;
+            if (agentData.voice_temperature !== undefined) {
+              newConfig.general.voice_pitch = agentData.voice_temperature;
+              newConfig.general.voice_temperature = agentData.voice_temperature;
+            }
+            
+            // Update script data - check multiple possible fields
+            if (agentData.script) {
+              // If script object exists, use it
+              newConfig.script = agentData.script;
+            } else if (agentData.prompt || agentData.general_prompt || agentData.begin_message) {
+              // Otherwise, construct from individual fields
+              newConfig.script = {
+                greeting: agentData.begin_message || prevConfig.script.greeting,
+                main_prompt: agentData.prompt || agentData.general_prompt || prevConfig.script.main_prompt,
+                ending: agentData.end_message || prevConfig.script.ending,
+                hold_message: prevConfig.script.hold_message,
+                voicemail: prevConfig.script.voicemail
+              };
+            }
+            
+            // Update conversation settings
+            if (agentData.interruption_sensitivity !== undefined) {
+              newConfig.conversation.interruption_sensitivity = agentData.interruption_sensitivity;
+            }
+            if (agentData.enable_backchannel !== undefined) {
+              newConfig.conversation.enable_backchanneling = agentData.enable_backchannel;
+            }
+            if (agentData.backchannel_frequency !== undefined) {
+              newConfig.conversation.backchannel_frequency = agentData.backchannel_frequency;
+            }
+            if (agentData.backchannel_words?.length > 0) {
+              newConfig.conversation.backchannel_words = agentData.backchannel_words;
+            }
+            if (agentData.reminder_trigger_ms !== undefined) {
+              newConfig.conversation.reminder_enabled = agentData.reminder_trigger_ms > 0;
+              newConfig.conversation.reminder_interval = agentData.reminder_trigger_ms / 1000;
+            }
+            if (agentData.reminder_max_count !== undefined) {
+              newConfig.conversation.reminder_max_count = agentData.reminder_max_count;
+            }
+            
+            // Update notification settings
+            if (agentData.webhook_url) {
+              newConfig.notifications.webhook_enabled = true;
+              newConfig.notifications.webhook_url = agentData.webhook_url;
+            }
+            
+            // Merge any additional settings
+            if (agentData.settings) {
+              Object.assign(newConfig, agentData.settings);
+            }
+            
+            return newConfig;
+          });
         } else {
           // Show error code only
           const errorData = await res.json().catch(() => ({}));
