@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { getTenantConfig } from '@/config/tenant.config';
 
 export async function POST(request: NextRequest) {
   try {
+    const tenant = getTenantConfig();
     const data = await request.json();
     
     const {
@@ -22,17 +24,19 @@ export async function POST(request: NextRequest) {
       to_number
     } = data;
 
-    const lineAccessToken = process.env.LINE_CHANNEL_ACCESS_TOKEN;
-    if (!lineAccessToken) {
-      console.error('LINE_CHANNEL_ACCESS_TOKEN not found in environment variables');
+    // Check if LINE is enabled for this tenant
+    if (!tenant.features.lineNotification || !tenant.line?.accessToken) {
+      console.error('LINE notification is not enabled for this tenant');
       return NextResponse.json(
-        { error: 'LINE configuration not found' },
-        { status: 500 }
+        { error: 'LINE notification is not enabled for this tenant' },
+        { status: 400 }
       );
     }
 
-    // Format the message for LINE
-    let message = `📞 通話詳細レポート\n`;
+    const lineAccessToken = tenant.line.accessToken;
+
+    // Format the message for LINE with tenant branding
+    let message = `📞 ${tenant.name} - 通話詳細レポート\n`;
     message += `────────────────\n`;
     message += `📅 ${new Date(start_timestamp).toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' })}\n`;
     message += `⏱️ 通話時間: ${Math.floor(duration / 60)}分${Math.floor(duration % 60)}秒\n`;
@@ -85,7 +89,7 @@ export async function POST(request: NextRequest) {
     // Check if we should use broadcast or push API
     // If LINE_USER_ID is set, use push API for specific user
     // Otherwise, use broadcast to send to all followers
-    const userId = process.env.LINE_USER_ID;
+    const userId = tenant.line.userId;
     
     // Send to LINE - use broadcast if no specific user ID
     const endpoint = userId 

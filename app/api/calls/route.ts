@@ -1,22 +1,26 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { Retell } from 'retell-sdk';
+import { getTenantConfig } from '@/config/tenant.config';
 
 // Force dynamic rendering to prevent build-time execution
 export const dynamic = 'force-dynamic';
 
 export async function GET(request: NextRequest) {
   try {
+    // Get tenant configuration
+    const tenant = getTenantConfig();
+    
     // Check for API key before proceeding
-    if (!process.env.RETELL_API_KEY) {
+    if (!tenant.retell.apiKey) {
       return NextResponse.json(
-        { error: 'Retell API key not configured' },
+        { error: 'Retell API key not configured for this tenant' },
         { status: 500 }
       );
     }
 
-    // Initialize Retell client at runtime
+    // Initialize Retell client with tenant's API key
     const retellClient = new Retell({ 
-      apiKey: process.env.RETELL_API_KEY 
+      apiKey: tenant.retell.apiKey 
     });
     
     const searchParams = request.nextUrl.searchParams;

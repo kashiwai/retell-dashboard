@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { AuthProvider } from "@/components/auth-provider";
+import { getTenantConfig } from "@/config/tenant.config";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -13,9 +14,12 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
+// テナント設定を取得
+const tenant = getTenantConfig();
+
 export const metadata: Metadata = {
-  title: "TSUNAGARU.AI - AI受付管理システム",
-  description: "AI受付管理システム",
+  title: `${tenant.name} - ダッシュボード`,
+  description: `${tenant.name}の通話管理システム`,
 };
 
 export default function RootLayout({
@@ -25,6 +29,25 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="ja">
+      <head>
+        <style dangerouslySetInnerHTML={{
+          __html: `
+            :root {
+              --tenant-primary: ${tenant.primaryColor};
+              --tenant-secondary: ${tenant.secondaryColor || '#f0f0f0'};
+            }
+            .tenant-primary-bg {
+              background-color: var(--tenant-primary) !important;
+            }
+            .tenant-primary-text {
+              color: var(--tenant-primary) !important;
+            }
+            .tenant-secondary-bg {
+              background-color: var(--tenant-secondary) !important;
+            }
+          `
+        }} />
+      </head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
