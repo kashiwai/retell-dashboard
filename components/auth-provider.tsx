@@ -73,14 +73,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []); // 初回マウント時のみ実行
   
   // 認証されていない場合のリダイレクト処理
-  // 一時的に無効化（開発用）
   useEffect(() => {
-    // TODO: 本番環境では認証を有効化すること
-    /*
+    // ログインページ以外でトークンがない場合はリダイレクト
     if (!isLoading && !token && pathname !== '/login') {
       router.push('/login');
     }
-    */
   }, [isLoading, token, pathname, router]);
 
   const login = (newToken: string, newUser: User) => {

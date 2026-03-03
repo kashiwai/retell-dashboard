@@ -1,23 +1,30 @@
 import { NextRequest, NextResponse } from 'next/server';
 import crypto from 'crypto';
 
-// ハードコードされたユーザー情報（本番環境ではデータベースを使用）
-const USERS = [
-  {
-    id: 1,
-    username: 'admin',
-    password: 'admin123', // 本番環境ではハッシュ化する
-    role: 'admin',
-    name: '管理者'
-  },
-  {
-    id: 2,
-    username: 'user',
-    password: 'user123',
-    role: 'user',
-    name: 'ユーザー'
-  }
-];
+// ユーザー情報（環境変数でカスタマイズ可能）
+const getUsers = () => {
+  const adminUsername = process.env.ADMIN_USERNAME || 'admin';
+  const adminPassword = process.env.ADMIN_PASSWORD || 'admin123';
+  const userUsername = process.env.USER_USERNAME || 'user';
+  const userPassword = process.env.USER_PASSWORD || 'user123';
+  
+  return [
+    {
+      id: 1,
+      username: adminUsername,
+      password: adminPassword, // 本番環境ではハッシュ化する
+      role: 'admin',
+      name: '管理者'
+    },
+    {
+      id: 2,
+      username: userUsername,
+      password: userPassword,
+      role: 'user',
+      name: 'ユーザー'
+    }
+  ];
+};
 
 // シンプルなトークン生成（本番環境ではJWTを使用）
 function generateToken(userId: number): string {
@@ -31,7 +38,8 @@ export async function POST(request: NextRequest) {
     const { username, password } = await request.json();
 
     // ユーザー認証
-    const user = USERS.find(u => u.username === username && u.password === password);
+    const users = getUsers();
+    const user = users.find(u => u.username === username && u.password === password);
 
     if (!user) {
       return NextResponse.json(
