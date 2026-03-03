@@ -1,9 +1,10 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Lock, User, Eye, EyeOff, LogIn } from 'lucide-react';
 import Image from 'next/image';
+import { useAuth } from '@/components/auth-provider';
 
 export default function LoginPage() {
   const [username, setUsername] = useState('');
@@ -12,6 +13,14 @@ export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const router = useRouter();
+  const { login, token } = useAuth();
+
+  // 既にログイン済みの場合はダッシュボードにリダイレクト
+  useEffect(() => {
+    if (token) {
+      router.push('/');
+    }
+  }, [token, router]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -28,9 +37,8 @@ export default function LoginPage() {
       const data = await response.json();
 
       if (response.ok) {
-        // Save token to localStorage
-        localStorage.setItem('auth_token', data.token);
-        localStorage.setItem('user', JSON.stringify(data.user));
+        // AuthContextのlogin関数を使用
+        login(data.token, data.user);
         
         // Redirect to dashboard
         router.push('/');
@@ -38,6 +46,7 @@ export default function LoginPage() {
         setError(data.error || 'ログインに失敗しました');
       }
     } catch (error) {
+      console.error('Login error:', error);
       setError('ネットワークエラーが発生しました');
     } finally {
       setIsLoading(false);

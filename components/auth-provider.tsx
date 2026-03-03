@@ -74,8 +74,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   
   // 認証されていない場合のリダイレクト処理
   useEffect(() => {
-    // ログインページ以外でトークンがない場合はリダイレクト
-    if (!isLoading && !token && pathname !== '/login') {
+    // ログインページの場合はリダイレクトしない
+    if (pathname === '/login') {
+      return;
+    }
+    
+    // APIエンドポイント、Next.jsの内部パスはリダイレクトしない
+    if (pathname.startsWith('/api/') || 
+        pathname.startsWith('/_next/') ||
+        pathname.includes('.')) {
+      return;
+    }
+    
+    // ローディング中はリダイレクトしない
+    if (isLoading) {
+      return;
+    }
+    
+    // トークンがない場合のみリダイレクト
+    if (!token) {
       router.push('/login');
     }
   }, [isLoading, token, pathname, router]);
