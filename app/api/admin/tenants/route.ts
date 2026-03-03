@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getPhoneTenantMapping, getAllTenants } from '@/config/phone-tenant-mapping';
+import { getPhoneTenantMapping } from '@/config/phone-tenant-mapping';
 import fs from 'fs/promises';
 import path from 'path';
 
