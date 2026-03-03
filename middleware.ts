@@ -16,6 +16,11 @@ const INTERNAL_API_PATHS = ['/api/summarize'];
 export function middleware(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
   
+  // 一時的に認証を無効化（開発用）
+  // TODO: 本番環境では必ず認証を有効化すること
+  return NextResponse.next();
+  
+  /* 認証処理（一時的にコメントアウト）
   // 公開パスはスキップ
   if (PUBLIC_PATHS.some(path => pathname.startsWith(path))) {
     return NextResponse.next();
@@ -61,6 +66,7 @@ export function middleware(request: NextRequest) {
   // ページルートの認証チェック（クライアントサイドでチェック）
   // サーバーサイドではCookieベースの認証が必要（ここでは簡略化）
   return NextResponse.next();
+  */
 }
 
 export const config = {
