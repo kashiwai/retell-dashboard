@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { Plus, Edit, Trash2, Phone, Settings, Users, Save, X } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 
 interface Tenant {
   tenantId: string;
@@ -18,10 +19,12 @@ interface Tenant {
 }
 
 export default function TenantsManagementPage() {
+  const router = useRouter();
   const [tenants, setTenants] = useState<Tenant[]>([]);
   const [isAddingTenant, setIsAddingTenant] = useState(false);
   const [editingTenant, setEditingTenant] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [authChecked, setAuthChecked] = useState(false);
   
   // 新規テナント用のフォーム
   const [newTenant, setNewTenant] = useState<Partial<Tenant>>({
@@ -37,18 +40,50 @@ export default function TenantsManagementPage() {
     }
   });
 
-  // テナント一覧を取得
+  // 認証チェック
   useEffect(() => {
-    fetchTenants();
-  }, []);
+    const checkAuth = () => {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        router.push('/login');
+        return;
+      }
+      setAuthChecked(true);
+      fetchTenants();
+    };
+    
+    checkAuth();
+  }, [router]);
 
   const fetchTenants = async () => {
     try {
       const response = await fetch('/api/admin/tenants');
+      
+      // エラーレスポンスの処理
+      if (!response.ok) {
+        console.error('Failed to fetch tenants, status:', response.status);
+        // 認証エラーの場合はログインページにリダイレクト
+        if (response.status === 401 || response.status === 403) {
+          window.location.href = '/login';
+          return;
+        }
+        setTenants([]);
+        return;
+      }
+      
       const data = await response.json();
+      
+      // dataが配列でない場合の処理
+      if (!Array.isArray(data)) {
+        console.error('Invalid response format:', data);
+        setTenants([]);
+        return;
+      }
+      
       setTenants(data);
     } catch (error) {
       console.error('Failed to fetch tenants:', error);
+      setTenants([]);
     } finally {
       setLoading(false);
     }
@@ -114,6 +149,30 @@ export default function TenantsManagementPage() {
       console.error('Failed to delete tenant:', error);
     }
   };
+
+  // 認証チェック中
+  if (!authChecked) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="text-center">
+          <div className="w-16 h-16 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+          <p className="text-gray-600">認証を確認中...</p>
+        </div>
+      </div>
+    );
+  }
+  
+  // ローディング中
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="text-center">
+          <div className="w-16 h-16 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+          <p className="text-gray-600">テナント情報を読み込み中...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50 p-8">
