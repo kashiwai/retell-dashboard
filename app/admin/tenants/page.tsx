@@ -43,7 +43,8 @@ export default function TenantsManagementPage() {
   // 認証チェック
   useEffect(() => {
     const checkAuth = () => {
-      const token = localStorage.getItem('token');
+      // AuthProviderと同じキーを使用
+      const token = localStorage.getItem('auth_token');
       if (!token) {
         router.push('/login');
         return;
@@ -57,7 +58,12 @@ export default function TenantsManagementPage() {
 
   const fetchTenants = async () => {
     try {
-      const response = await fetch('/api/admin/tenants');
+      const token = localStorage.getItem('auth_token');
+      const response = await fetch('/api/admin/tenants', {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
       
       // エラーレスポンスの処理
       if (!response.ok) {
@@ -92,9 +98,13 @@ export default function TenantsManagementPage() {
   // テナント追加
   const handleAddTenant = async () => {
     try {
+      const token = localStorage.getItem('auth_token');
       const response = await fetch('/api/admin/tenants', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
         body: JSON.stringify(newTenant)
       });
       
@@ -118,9 +128,13 @@ export default function TenantsManagementPage() {
   // テナント更新
   const handleUpdateTenant = async (tenant: Tenant) => {
     try {
+      const token = localStorage.getItem('auth_token');
       const response = await fetch(`/api/admin/tenants/${tenant.tenantId}`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
         body: JSON.stringify(tenant)
       });
       
@@ -138,8 +152,12 @@ export default function TenantsManagementPage() {
     if (!confirm('このテナントを削除してもよろしいですか？')) return;
     
     try {
+      const token = localStorage.getItem('auth_token');
       const response = await fetch(`/api/admin/tenants/${tenantId}`, {
-        method: 'DELETE'
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
       });
       
       if (response.ok) {
