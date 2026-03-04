@@ -9,17 +9,34 @@ export async function GET(request: NextRequest) {
     // 環境変数から現在の設定を取得
     const mapping = getPhoneTenantMapping();
     
+    if (!mapping || Object.keys(mapping).length === 0) {
+      console.log('No tenant mapping found, returning empty array');
+      return NextResponse.json([]);
+    }
+    
     // 電話番号をキーとしたマッピングをテナント配列に変換
-    const tenants = Object.entries(mapping).map(([phone, config]) => ({
-      ...config,
-      phoneNumber: phone === 'default' ? '' : phone,
-    })).filter(t => t.phoneNumber); // defaultを除外
+    const tenants = Object.entries(mapping)
+      .filter(([phone]) => phone !== 'default')
+      .map(([phone, config]) => ({
+        tenantId: config.tenantId || '',
+        name: config.name || '',
+        phoneNumber: phone || '',
+        agentId: config.agentId || '',
+        primaryColor: config.primaryColor || '#00B900',
+        lineUserId: config.lineUserId || '',
+        features: {
+          line: config.features?.lineNotification ?? true,
+          gpt: config.features?.gptAnalysis ?? true,
+          recording: config.features?.voiceRecording ?? true
+        }
+      }))
+      .filter(t => t.phoneNumber && t.tenantId); // 有効なテナントのみ
     
     return NextResponse.json(tenants);
   } catch (error) {
     console.error('Error fetching tenants:', error);
     return NextResponse.json(
-      { error: 'Failed to fetch tenants' },
+      { error: 'Failed to fetch tenants', details: error instanceof Error ? error.message : 'Unknown error' },
       { status: 500 }
     );
   }

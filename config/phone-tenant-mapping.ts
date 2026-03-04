@@ -20,20 +20,41 @@ export interface PhoneTenantConfig {
 export function getPhoneTenantMapping(): Record<string, PhoneTenantConfig> {
   try {
     const mappingJson = process.env.TENANT_PHONE_MAPPING;
-    if (!mappingJson) {
+    if (!mappingJson || mappingJson.trim() === '') {
+      console.log('TENANT_PHONE_MAPPING not set, using default mapping');
       return getDefaultMapping();
     }
     
-    const mappingArray = JSON.parse(mappingJson);
+    // JSONパースを試みる
+    let mappingArray;
+    try {
+      mappingArray = JSON.parse(mappingJson);
+    } catch (parseError) {
+      console.error('Failed to parse TENANT_PHONE_MAPPING JSON:', parseError);
+      console.error('Invalid JSON:', mappingJson);
+      return getDefaultMapping();
+    }
+    
+    // 配列でない場合は空のマッピングを返す
+    if (!Array.isArray(mappingArray)) {
+      console.error('TENANT_PHONE_MAPPING is not an array');
+      return getDefaultMapping();
+    }
+    
     const mapping: Record<string, PhoneTenantConfig> = {};
     
     mappingArray.forEach((item: any) => {
+      if (!item || !item.phone) {
+        console.warn('Skipping invalid tenant entry:', item);
+        return;
+      }
+      
       const normalizedPhone = normalizePhoneNumber(item.phone);
       mapping[normalizedPhone] = {
-        tenantId: item.tenantId,
-        name: item.name,
-        agentId: item.agentId,
-        primaryColor: item.color || '#00B900',
+        tenantId: item.tenantId || `tenant-${normalizedPhone}`,
+        name: item.name || 'Unknown Tenant',
+        agentId: item.agentId || '',
+        primaryColor: item.color || item.primaryColor || '#00B900',
         secondaryColor: item.secondaryColor,
         logo: item.logo,
         lineUserId: item.lineUserId,
@@ -45,9 +66,14 @@ export function getPhoneTenantMapping(): Record<string, PhoneTenantConfig> {
       };
     });
     
+    // デフォルト設定も含める
+    if (!mapping['default']) {
+      mapping['default'] = getDefaultMapping()['default'];
+    }
+    
     return mapping;
   } catch (error) {
-    console.error('Failed to parse TENANT_PHONE_MAPPING:', error);
+    console.error('Unexpected error in getPhoneTenantMapping:', error);
     return getDefaultMapping();
   }
 }
