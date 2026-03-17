@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { createAdminClient } from '@/lib/supabase/admin';
 
 // Force dynamic rendering
 export const dynamic = 'force-dynamic';
@@ -61,9 +62,11 @@ export async function POST(request: NextRequest) {
     // Handle various event formats from Retell
     if (eventType === 'call_ended' || eventType === 'call.ended' || eventType === 'end_of_call') {
       console.log('Processing call_ended event');
+      await saveCallToDb(payload);
       await handleCallEnded(payload);
     } else if (eventType === 'call_analyzed' || eventType === 'call.analyzed' || eventType === 'analysis_completed' || eventType === 'post_call_analysis_completed') {
       console.log('Processing call_analyzed event with summary');
+      await saveCallToDb(payload);
       await handleCallAnalyzed(payload);
     } else {
       console.log(`Unknown event type: ${eventType}`);
@@ -94,6 +97,53 @@ export async function POST(request: NextRequest) {
     errorResponse.headers.set('Access-Control-Allow-Headers', 'Content-Type, Authorization, x-retell-signature, x-api-key');
     
     return errorResponse;
+  }
+}
+
+// Supabase DBに通話データを保存（テナント識別付き）
+async function saveCallToDb(payload: unknown) {
+  try {
+    if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) return
+
+    const p = payload as Record<string, unknown>
+    const call = (p.call ?? p) as Record<string, unknown>
+    if (!call.call_id) return
+
+    const admin = createAdminClient()
+    const agentId = call.agent_id as string | undefined
+
+    // agent_id からテナントを識別
+    let tenantId: string | null = null
+    if (agentId) {
+      const { data: tenant } = await admin
+        .from('tenants').select('id').eq('agent_id', agentId).single()
+      tenantId = tenant?.id ?? null
+    }
+
+    const analysis = (call.call_analysis ?? {}) as Record<string, unknown>
+    const startTs = call.start_timestamp as number | null
+    const endTs = call.end_timestamp as number | null
+
+    await admin.from('calls').upsert({
+      tenant_id: tenantId,
+      retell_call_id: call.call_id as string,
+      agent_id: agentId ?? null,
+      start_timestamp: startTs,
+      end_timestamp: endTs,
+      duration_ms: startTs && endTs ? (endTs - startTs) * 1000 : null,
+      status: call.call_status as string ?? null,
+      from_number: call.from_number as string ?? null,
+      to_number: call.to_number as string ?? null,
+      transcript: call.transcript as string ?? null,
+      summary: analysis.call_summary as string ?? null,
+      sentiment: analysis.user_sentiment as string ?? null,
+      fault_code: (analysis.custom_analysis as Record<string, unknown>)?.fault_code as string ?? null,
+      resolution_status: analysis.resolution_status as string ?? null,
+      custom_analysis: analysis as Record<string, unknown>,
+      recording_url: call.recording_url as string ?? null,
+    }, { onConflict: 'retell_call_id' })
+  } catch (err) {
+    console.error('Failed to save call to DB:', err)
   }
 }
 
