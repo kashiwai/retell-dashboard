@@ -6,6 +6,16 @@ import Link from 'next/link'
 import type { Tenant } from '@/lib/supabase/types'
 import { STATUS_LABELS, STATUS_COLORS, PLAN_LABELS } from '@/lib/supabase/types'
 
+interface TenantUserItem {
+  id: string
+  user_id: string
+  role: string
+  email: string
+  confirmed: boolean
+  last_sign_in: string | null
+  created_at: string
+}
+
 export default function TenantDetailPage() {
   const { tenantId } = useParams<{ tenantId: string }>()
   const router = useRouter()
@@ -22,6 +32,12 @@ export default function TenantDetailPage() {
   const [lineUserId, setLineUserId] = useState('')
   const [lineSecret, setLineSecret] = useState('')
 
+  // ユーザー管理
+  const [users, setUsers] = useState<TenantUserItem[]>([])
+  const [inviteEmail, setInviteEmail] = useState('')
+  const [inviting, setInviting] = useState(false)
+  const [inviteMsg, setInviteMsg] = useState('')
+
   const fetchTenant = useCallback(async () => {
     const res = await fetch(`/api/admin/tenants/${tenantId}`)
     if (res.ok) {
@@ -34,9 +50,15 @@ export default function TenantDetailPage() {
     setLoading(false)
   }, [tenantId])
 
+  const fetchUsers = useCallback(async () => {
+    const res = await fetch(`/api/admin/tenants/${tenantId}/users`)
+    if (res.ok) setUsers(await res.json())
+  }, [tenantId])
+
   useEffect(() => {
     fetchTenant()
-  }, [fetchTenant])
+    fetchUsers()
+  }, [fetchTenant, fetchUsers])
 
   // provisioningステータスをポーリング
   useEffect(() => {
@@ -87,6 +109,37 @@ export default function TenantDetailPage() {
     setTimeout(() => setSaveMsg(''), 3000)
   }
 
+  const handleInviteUser = async () => {
+    if (!inviteEmail) return
+    setInviting(true)
+    setInviteMsg('')
+    const res = await fetch(`/api/admin/tenants/${tenantId}/users`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: inviteEmail, role: 'owner' }),
+    })
+    if (res.ok) {
+      setInviteMsg('招待メールを送信しました')
+      setInviteEmail('')
+      await fetchUsers()
+    } else {
+      const data = await res.json()
+      setInviteMsg(data.error ?? '招待に失敗しました')
+    }
+    setInviting(false)
+    setTimeout(() => setInviteMsg(''), 5000)
+  }
+
+  const handleRemoveUser = async (userId: string) => {
+    if (!confirm('このユーザーのアクセスを削除しますか？')) return
+    await fetch(`/api/admin/tenants/${tenantId}/users`, {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ user_id: userId }),
+    })
+    await fetchUsers()
+  }
+
   const handleDeleteTenant = async () => {
     if (!confirm(`「${tenant?.company_name}」を削除しますか？この操作は取り消せません。`)) return
     await fetch(`/api/admin/tenants/${tenantId}`, { method: 'DELETE' })
@@ -122,12 +175,20 @@ export default function TenantDetailPage() {
             {STATUS_LABELS[tenant.status]}
           </span>
         </div>
-        <button
-          onClick={handleDeleteTenant}
-          className="text-red-500 hover:text-red-700 text-sm"
-        >
-          削除
-        </button>
+        <div className="flex items-center gap-3">
+          <Link
+            href={`/admin/tenants/${tenantId}/preview`}
+            className="px-3 py-1.5 bg-gray-100 text-gray-700 rounded-lg text-sm hover:bg-gray-200 font-medium"
+          >
+            ダッシュボードをプレビュー
+          </Link>
+          <button
+            onClick={handleDeleteTenant}
+            className="text-red-500 hover:text-red-700 text-sm"
+          >
+            削除
+          </button>
+        </div>
       </div>
 
       <div className="max-w-4xl mx-auto px-6 py-8 space-y-6">
@@ -310,6 +371,76 @@ export default function TenantDetailPage() {
               {saveMsg && <span className="text-sm text-green-600">{saveMsg}</span>}
             </div>
           </div>
+        </div>
+
+        {/* ユーザー管理 */}
+        <div className="bg-white rounded-xl border p-6">
+          <h2 className="text-lg font-semibold mb-4">ユーザー管理</h2>
+
+          {/* 招待フォーム */}
+          <div className="flex gap-3 mb-4">
+            <input
+              type="email"
+              placeholder="招待するメールアドレス"
+              value={inviteEmail}
+              onChange={e => setInviteEmail(e.target.value)}
+              onKeyDown={e => e.key === 'Enter' && handleInviteUser()}
+              className="flex-1 border rounded-lg px-3 py-2 text-sm"
+            />
+            <button
+              onClick={handleInviteUser}
+              disabled={!inviteEmail || inviting}
+              className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 disabled:opacity-50 whitespace-nowrap"
+            >
+              {inviting ? '送信中...' : '招待を送信'}
+            </button>
+          </div>
+          {inviteMsg && (
+            <p className={`text-sm mb-4 ${inviteMsg.includes('失敗') || inviteMsg.includes('Error') ? 'text-red-600' : 'text-green-600'}`}>
+              {inviteMsg}
+            </p>
+          )}
+
+          {/* ユーザー一覧 */}
+          {users.length === 0 ? (
+            <p className="text-sm text-gray-400">まだユーザーがいません。上のフォームから招待してください。</p>
+          ) : (
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b">
+                  <th className="text-left py-2 font-medium text-gray-600">メールアドレス</th>
+                  <th className="text-left py-2 font-medium text-gray-600">役割</th>
+                  <th className="text-left py-2 font-medium text-gray-600">ステータス</th>
+                  <th className="text-left py-2 font-medium text-gray-600">最終ログイン</th>
+                  <th className="py-2" />
+                </tr>
+              </thead>
+              <tbody className="divide-y">
+                {users.map(u => (
+                  <tr key={u.id}>
+                    <td className="py-2.5 text-gray-800">{u.email}</td>
+                    <td className="py-2.5 text-gray-600">{u.role}</td>
+                    <td className="py-2.5">
+                      <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${u.confirmed ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'}`}>
+                        {u.confirmed ? '確認済み' : '招待中'}
+                      </span>
+                    </td>
+                    <td className="py-2.5 text-gray-400 text-xs">
+                      {u.last_sign_in ? new Date(u.last_sign_in).toLocaleDateString('ja-JP') : '-'}
+                    </td>
+                    <td className="py-2.5 text-right">
+                      <button
+                        onClick={() => handleRemoveUser(u.user_id)}
+                        className="text-red-400 hover:text-red-600 text-xs"
+                      >
+                        削除
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
         </div>
 
         {/* 請求・レポートリンク */}
