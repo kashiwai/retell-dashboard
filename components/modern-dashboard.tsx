@@ -603,8 +603,24 @@ export default function ModernDashboard() {
                 <h1 className="text-2xl font-bold text-gray-900">電話番号管理</h1>
                 <p className="text-gray-500 mt-1">受信用電話番号の設定</p>
               </div>
+              <div className="flex items-center gap-2">
+                <a
+                  href="/admin/agent-builder"
+                  className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-xl text-sm font-medium hover:bg-purple-700 transition-colors"
+                >
+                  <Zap size={16} />
+                  AIエージェント自動作成
+                </a>
+                <a
+                  href="/admin/phone-numbers"
+                  className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-xl text-sm font-medium hover:bg-blue-700 transition-colors"
+                >
+                  <Settings size={16} />
+                  番号管理・050発行
+                </a>
+              </div>
             </div>
-            
+
             <div className="grid gap-4">
               {phoneNumbers.map((number) => (
                 <div key={number.id} className="bg-white rounded-2xl shadow-lg p-6 hover:shadow-xl transition-all">
@@ -619,16 +635,32 @@ export default function ModernDashboard() {
                       </div>
                     </div>
                     <div className="flex items-center gap-3">
-                      <span className="px-3 py-1 bg-green-100 text-green-700 text-xs font-medium rounded-full">
-                        有効
+                      <span className={`px-3 py-1 text-xs font-medium rounded-full ${
+                        number.agent_id
+                          ? 'bg-green-100 text-green-700'
+                          : 'bg-orange-100 text-orange-700'
+                      }`}>
+                        {number.agent_id ? '有効' : 'エージェント未設定'}
                       </span>
-                      <button className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
+                      <a
+                        href="/admin/phone-numbers"
+                        className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                      >
                         <Settings size={16} className="text-gray-500" />
-                      </button>
+                      </a>
                     </div>
                   </div>
                 </div>
               ))}
+              {phoneNumbers.length === 0 && (
+                <div className="bg-white rounded-2xl shadow-lg p-10 text-center text-gray-400">
+                  <Phone size={40} className="mx-auto mb-3 text-gray-300" />
+                  <p>番号が見つかりません</p>
+                  <a href="/admin/phone-numbers" className="mt-3 inline-block text-sm text-blue-600 hover:underline">
+                    電話番号管理ページで確認・インポート →
+                  </a>
+                </div>
+              )}
             </div>
           </div>
         );
