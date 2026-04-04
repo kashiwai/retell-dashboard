@@ -21,7 +21,7 @@ export async function PUT(req: NextRequest, { params }: Params) {
     'company_name', 'contact_person', 'email', 'status', 'plan',
     'notes', 'primary_color', 'features',
     'line_access_token', 'line_user_id', 'line_channel_secret',
-    'monthly_fee', 'minute_rate',
+    'monthly_fee', 'minute_rate', 'monthly_limit',
   ]
   const updates: Record<string, unknown> = {}
   for (const key of allowed) {

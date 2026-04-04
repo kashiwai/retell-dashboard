@@ -30,6 +30,11 @@ export async function GET(req: NextRequest, { params }: Params) {
   const callCount = callList.length
   const usageFee = totalMinutes * tenant.minute_rate
   const totalFee = tenant.monthly_fee + usageFee
+  const monthlyLimit: number | null = tenant.monthly_limit ?? null
+  const remaining = monthlyLimit != null ? Math.max(0, monthlyLimit - totalFee) : null
+  const usagePercent = monthlyLimit != null && monthlyLimit > 0
+    ? Math.min(100, Math.round((totalFee / monthlyLimit) * 100))
+    : null
 
   return NextResponse.json({
     month,
@@ -41,5 +46,10 @@ export async function GET(req: NextRequest, { params }: Params) {
     minuteRate: tenant.minute_rate,
     plan: tenant.plan,
     companyName: tenant.company_name,
+    monthlyLimit,
+    remaining,
+    usagePercent,
+    status: tenant.status,
+    suspendedAt: tenant.suspended_at ?? null,
   })
 }

@@ -27,6 +27,11 @@ export default function TenantDetailPage() {
   const [saveMsg, setSaveMsg] = useState('')
   const [existingPhone, setExistingPhone] = useState('')
 
+  // 料金上限設定
+  const [monthlyLimit, setMonthlyLimit] = useState<string>('')
+  const [savingLimit, setSavingLimit] = useState(false)
+  const [limitMsg, setLimitMsg] = useState('')
+
   // LINE設定
   const [lineToken, setLineToken] = useState('')
   const [lineUserId, setLineUserId] = useState('')
@@ -43,6 +48,7 @@ export default function TenantDetailPage() {
     if (res.ok) {
       const data: Tenant = await res.json()
       setTenant(data)
+      setMonthlyLimit(data.monthly_limit != null ? String(data.monthly_limit) : '')
       setLineToken(data.line_access_token ?? '')
       setLineUserId(data.line_user_id ?? '')
       setLineSecret(data.line_channel_secret ?? '')
@@ -85,6 +91,34 @@ export default function TenantDetailPage() {
       setProvisionError(data.error ?? 'プロビジョニングに失敗しました')
     }
     setProvisioning(false)
+  }
+
+  const handleSaveLimit = async () => {
+    setSavingLimit(true)
+    const val = monthlyLimit === '' ? null : parseInt(monthlyLimit, 10)
+    const res = await fetch(`/api/admin/tenants/${tenantId}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ monthly_limit: val }),
+    })
+    if (res.ok) {
+      setLimitMsg('保存しました')
+      await fetchTenant()
+    } else {
+      setLimitMsg('保存に失敗しました')
+    }
+    setSavingLimit(false)
+    setTimeout(() => setLimitMsg(''), 3000)
+  }
+
+  const handleResumeTenant = async () => {
+    if (!confirm('このテナントのサービスを再開しますか？')) return
+    const res = await fetch(`/api/admin/tenants/${tenantId}/resume`, { method: 'POST' })
+    if (res.ok) {
+      await fetchTenant()
+    } else {
+      alert('再開に失敗しました')
+    }
   }
 
   const handleSaveLine = async () => {
@@ -232,6 +266,71 @@ export default function TenantDetailPage() {
               <dd className="font-medium mt-0.5">{new Date(tenant.created_at).toLocaleDateString('ja-JP')}</dd>
             </div>
           </dl>
+        </div>
+
+        {/* 停止中バナー */}
+        {tenant.status === 'suspended' && (
+          <div className="bg-orange-50 border border-orange-200 rounded-xl p-4 flex items-center justify-between">
+            <div>
+              <p className="text-orange-800 font-semibold">⚠️ このテナントは現在停止中です</p>
+              <p className="text-orange-600 text-sm mt-0.5">
+                月額上限を超えたため自動停止されました。
+                {tenant.suspended_at && ` 停止日時：${new Date(tenant.suspended_at).toLocaleString('ja-JP')}`}
+              </p>
+            </div>
+            <button
+              onClick={handleResumeTenant}
+              className="px-4 py-2 bg-orange-600 text-white rounded-lg text-sm font-medium hover:bg-orange-700"
+            >
+              サービスを再開
+            </button>
+          </div>
+        )}
+
+        {/* 料金設定・上限管理 */}
+        <div className="bg-white rounded-xl border p-6">
+          <h2 className="text-lg font-semibold mb-4">料金・上限設定</h2>
+          <dl className="grid grid-cols-2 gap-4 text-sm mb-5">
+            <div>
+              <dt className="text-gray-500">月額基本料金</dt>
+              <dd className="font-medium mt-0.5">¥{tenant.monthly_fee.toLocaleString()}</dd>
+            </div>
+            <div>
+              <dt className="text-gray-500">分単価</dt>
+              <dd className="font-medium mt-0.5">¥{tenant.minute_rate}/分</dd>
+            </div>
+          </dl>
+          <div className="border-t pt-4">
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              月額上限金額（円）
+              <span className="ml-2 text-xs font-normal text-gray-400">
+                — この金額を超えると自動停止。空欄で上限なし。
+              </span>
+            </label>
+            <div className="flex gap-3">
+              <input
+                type="number"
+                value={monthlyLimit}
+                onChange={e => setMonthlyLimit(e.target.value)}
+                placeholder="例: 50000（上限なしの場合は空欄）"
+                className="flex-1 border rounded-lg px-3 py-2 text-sm"
+                min="0"
+              />
+              <button
+                onClick={handleSaveLimit}
+                disabled={savingLimit}
+                className="px-4 py-2 bg-gray-900 text-white rounded-lg text-sm font-medium hover:bg-gray-700 disabled:opacity-50 whitespace-nowrap"
+              >
+                {savingLimit ? '保存中...' : '上限を保存'}
+              </button>
+            </div>
+            {limitMsg && <p className="text-sm mt-2 text-green-600">{limitMsg}</p>}
+            {tenant.monthly_limit != null && (
+              <p className="text-xs text-gray-500 mt-2">
+                現在の上限：¥{tenant.monthly_limit.toLocaleString()}/月
+              </p>
+            )}
+          </div>
         </div>
 
         {/* 050番号・エージェント */}

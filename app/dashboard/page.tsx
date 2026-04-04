@@ -38,6 +38,12 @@ export default function TenantDashboardPage() {
       const { tenant: t } = await tenantRes.json()
       setTenant(t)
 
+      // オンボーディング未完了なら誘導
+      if (t.status === 'active' && t.onboarding_completed === false) {
+        router.push('/onboarding')
+        return
+      }
+
       // KPI取得
       const kpiRes = await fetch(`/api/dashboard/kpi?tenant_id=${t.id}&month=${thisMonth}`)
       if (kpiRes.ok) {
@@ -77,6 +83,12 @@ export default function TenantDashboardPage() {
         </div>
         <div className="flex items-center gap-3">
           <Link
+            href="/dashboard/billing"
+            className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200"
+          >
+            料金・利用状況
+          </Link>
+          <Link
             href="/dashboard/calls"
             className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700"
           >
@@ -89,6 +101,21 @@ export default function TenantDashboardPage() {
       </div>
 
       <div className="max-w-5xl mx-auto px-6 py-8 space-y-6">
+        {/* 停止中バナー */}
+        {tenant?.status === 'suspended' && (
+          <div className="bg-red-50 border border-red-200 rounded-xl p-4 flex items-center justify-between">
+            <div>
+              <p className="text-red-800 font-semibold">サービスが停止されています</p>
+              <p className="text-red-600 text-sm">月額利用上限に達したため受発信が停止されました。</p>
+            </div>
+            <Link
+              href="/dashboard/billing"
+              className="px-4 py-2 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 whitespace-nowrap"
+            >
+              詳細を確認
+            </Link>
+          </div>
+        )}
 
         {/* KPIカード */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">

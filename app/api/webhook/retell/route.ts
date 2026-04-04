@@ -63,6 +63,7 @@ export async function POST(request: NextRequest) {
     if (eventType === 'call_ended' || eventType === 'call.ended' || eventType === 'end_of_call') {
       console.log('Processing call_ended event');
       await saveCallToDb(payload);
+      await checkAndAutoSuspend(payload);
       await handleCallEnded(payload);
     } else if (eventType === 'call_analyzed' || eventType === 'call.analyzed' || eventType === 'analysis_completed' || eventType === 'post_call_analysis_completed') {
       console.log('Processing call_analyzed event with summary');
@@ -144,6 +145,65 @@ async function saveCallToDb(payload: unknown) {
     }, { onConflict: 'retell_call_id' })
   } catch (err) {
     console.error('Failed to save call to DB:', err)
+  }
+}
+
+// 月額上限チェック → 超過なら自動停止
+async function checkAndAutoSuspend(payload: unknown) {
+  try {
+    if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) return
+
+    const p = payload as Record<string, unknown>
+    const call = (p.call ?? p) as Record<string, unknown>
+    const agentId = call.agent_id as string | undefined
+    if (!agentId) return
+
+    const admin = createAdminClient()
+    const { data: tenant } = await admin
+      .from('tenants')
+      .select('id, status, monthly_limit, monthly_fee, minute_rate, twilio_phone_sid, trunk_sid')
+      .eq('agent_id', agentId)
+      .single()
+
+    if (!tenant || tenant.status !== 'active' || !tenant.monthly_limit) return
+
+    // 当月の累計費用を算出
+    const now = new Date()
+    const monthStr = now.toISOString().slice(0, 7)
+    const startOfMonth = new Date(`${monthStr}-01T00:00:00Z`)
+    const endOfMonth = new Date(startOfMonth)
+    endOfMonth.setMonth(endOfMonth.getMonth() + 1)
+
+    const { data: calls } = await admin
+      .from('calls')
+      .select('duration_ms')
+      .eq('tenant_id', tenant.id)
+      .gte('created_at', startOfMonth.toISOString())
+      .lt('created_at', endOfMonth.toISOString())
+
+    const totalMs = (calls ?? []).reduce((sum: number, c: Record<string, number | null>) => sum + (c.duration_ms ?? 0), 0)
+    const totalMinutes = Math.ceil(totalMs / 60000)
+    const totalFee = tenant.monthly_fee + totalMinutes * tenant.minute_rate
+
+    if (totalFee >= tenant.monthly_limit) {
+      console.log(`[AutoSuspend] Tenant ${tenant.id}: ¥${totalFee} >= limit ¥${tenant.monthly_limit}. Suspending.`)
+
+      // DB を停止状態に更新
+      await admin.from('tenants').update({
+        status: 'suspended',
+        suspended_at: new Date().toISOString(),
+      }).eq('id', tenant.id)
+
+      // 着信ブロック：Twilio 番号を SIP Trunk から切り離す
+      if (tenant.twilio_phone_sid && tenant.trunk_sid && process.env.NEXT_PUBLIC_APP_URL) {
+        const { suspendPhoneNumber } = await import('@/lib/provisioning/twilio')
+        const suspendedUrl = `${process.env.NEXT_PUBLIC_APP_URL}/api/twiml/suspended`
+        await suspendPhoneNumber(tenant.twilio_phone_sid, tenant.trunk_sid, suspendedUrl)
+        console.log(`[AutoSuspend] Twilio number ${tenant.twilio_phone_sid} unlinked from trunk.`)
+      }
+    }
+  } catch (err) {
+    console.error('[AutoSuspend] Error:', err)
   }
 }
 

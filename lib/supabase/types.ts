@@ -7,6 +7,7 @@ export interface Tenant {
   plan: 'trial' | 'basic' | 'pro' | 'enterprise'
   monthly_fee: number
   minute_rate: number
+  monthly_limit: number | null
   phone_number: string | null
   twilio_phone_sid: string | null
   trunk_sid: string | null
@@ -24,6 +25,9 @@ export interface Tenant {
   primary_color: string
   notes: string | null
   billing_start_date: string | null
+  onboarding_completed: boolean
+  onboarding_data: Record<string, unknown> | null
+  suspended_at: string | null
   created_at: string
   updated_at: string
 }
