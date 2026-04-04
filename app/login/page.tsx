@@ -1,41 +1,27 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useTransition } from 'react';
 import { Lock, Mail, Eye, EyeOff, LogIn } from 'lucide-react';
+import { signInAction } from './actions';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
+  const [isPending, startTransition] = useTransition();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
-    setIsLoading(true);
 
-    try {
-      const res = await fetch('/api/auth/signin', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password }),
-      });
-
-      const data = await res.json();
-
-      if (!res.ok) {
-        setError(data.error || 'ログインに失敗しました');
-        return;
+    startTransition(async () => {
+      const result = await signInAction(email, password);
+      if (result?.error) {
+        setError(result.error);
       }
-
-      // サーバーがクッキーを設定済み → フルページ遷移でmiddlewareに認証を渡す
-      window.location.href = data.redirectPath;
-    } catch {
-      setError('ネットワークエラーが発生しました');
-    } finally {
-      setIsLoading(false);
-    }
+      // 成功時はServer Action内のredirect()が処理する
+    });
   };
 
   return (
@@ -72,7 +58,7 @@ export default function LoginPage() {
                   className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   placeholder="メールアドレスを入力"
                   required
-                  disabled={isLoading}
+                  disabled={isPending}
                   autoComplete="email"
                 />
               </div>
@@ -93,7 +79,7 @@ export default function LoginPage() {
                   className="block w-full pl-10 pr-10 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   placeholder="パスワードを入力"
                   required
-                  disabled={isLoading}
+                  disabled={isPending}
                   autoComplete="current-password"
                 />
                 <button
@@ -118,14 +104,14 @@ export default function LoginPage() {
 
             <button
               type="submit"
-              disabled={isLoading}
+              disabled={isPending}
               className={`w-full flex items-center justify-center gap-2 py-3 px-4 rounded-lg font-medium text-white transition-all ${
-                isLoading
+                isPending
                   ? 'bg-gray-400 cursor-not-allowed'
                   : 'bg-gradient-to-r from-blue-600 to-cyan-500 hover:from-blue-700 hover:to-cyan-600 shadow-lg hover:shadow-xl'
               }`}
             >
-              {isLoading ? (
+              {isPending ? (
                 <>
                   <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
                   <span>ログイン中...</span>
