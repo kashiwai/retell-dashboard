@@ -4,11 +4,12 @@ import { NextResponse, type NextRequest } from 'next/server'
 const PUBLIC_PATHS = [
   '/login',
   '/api/auth/login',
+  '/api/auth/signin',   // Supabaseサーバーサイドログイン
   '/api/auth/logout',
   '/api/webhook/retell',
   '/api/line/webhook',
   '/api/notify/line',
-  '/api/twiml/',      // Twilio が認証なしで叩く停止メッセージエンドポイント
+  '/api/twiml/',        // Twilio が認証なしで叩く停止メッセージエンドポイント
 ]
 
 export async function middleware(request: NextRequest) {

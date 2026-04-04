@@ -1,9 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
 import { Lock, Mail, Eye, EyeOff, LogIn } from 'lucide-react';
-import { createClient } from '@/lib/supabase/client';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
@@ -11,7 +9,6 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
-  const router = useRouter();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -19,19 +16,21 @@ export default function LoginPage() {
     setIsLoading(true);
 
     try {
-      const supabase = createClient();
-      const { error: authError } = await supabase.auth.signInWithPassword({
-        email,
-        password,
+      const res = await fetch('/api/auth/signin', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password }),
       });
 
-      if (authError) {
-        setError('メールアドレスまたはパスワードが正しくありません');
+      const data = await res.json();
+
+      if (!res.ok) {
+        setError(data.error || 'ログインに失敗しました');
         return;
       }
 
-      router.push('/');
-      router.refresh();
+      // サーバーがクッキーを設定済み → フルページ遷移でmiddlewareに認証を渡す
+      window.location.href = data.redirectPath;
     } catch {
       setError('ネットワークエラーが発生しました');
     } finally {
