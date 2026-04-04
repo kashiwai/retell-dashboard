@@ -6,3 +6,10 @@ export async function POST() {
   await supabase.auth.signOut()
   return NextResponse.json({ success: true })
 }
+
+// GET: Linkタグからのログアウト対応
+export async function GET() {
+  const supabase = await createClient()
+  await supabase.auth.signOut()
+  return NextResponse.redirect(new URL('/login', process.env.NEXT_PUBLIC_APP_URL || 'https://retell-dashboard-opal.vercel.app'))
+}
