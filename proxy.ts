@@ -12,7 +12,7 @@ const PUBLIC_PATHS = [
   '/api/twiml/',        // Twilio が認証なしで叩く停止メッセージエンドポイント
 ]
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl
 
   // 公開パスはスキップ
