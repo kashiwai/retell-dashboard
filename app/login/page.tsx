@@ -1,28 +1,19 @@
 'use client';
 
-import { useState, useTransition } from 'react';
+import { useState } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { Lock, Mail, Eye, EyeOff, LogIn } from 'lucide-react';
-import { signInAction } from './actions';
+import { Suspense } from 'react';
 
-export default function LoginPage() {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+function LoginForm() {
   const [showPassword, setShowPassword] = useState(false);
-  const [error, setError] = useState('');
-  const [isPending, startTransition] = useTransition();
+  const searchParams = useSearchParams();
+  const errorCode = searchParams.get('error');
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError('');
-
-    startTransition(async () => {
-      const result = await signInAction(email, password);
-      if (result?.error) {
-        setError(result.error);
-      }
-      // 成功時はServer Action内のredirect()が処理する
-    });
-  };
+  const errorMessage =
+    errorCode === 'invalid' ? 'メールアドレスまたはパスワードが正しくありません' :
+    errorCode === 'missing' ? 'メールアドレスとパスワードを入力してください' :
+    errorCode ? 'ログインに失敗しました' : null;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-600 via-blue-500 to-cyan-400 flex items-center justify-center p-4">
@@ -41,8 +32,8 @@ export default function LoginPage() {
             <p className="text-blue-100">AI受付管理システム</p>
           </div>
 
-          {/* Login Form */}
-          <form onSubmit={handleSubmit} className="p-8 space-y-6">
+          {/* Login Form — ネイティブPOSTで/api/auth/signinへ送信 */}
+          <form action="/api/auth/signin" method="POST" className="p-8 space-y-6">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 メールアドレス
@@ -53,12 +44,10 @@ export default function LoginPage() {
                 </div>
                 <input
                   type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  name="email"
                   className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   placeholder="メールアドレスを入力"
                   required
-                  disabled={isPending}
                   autoComplete="email"
                 />
               </div>
@@ -74,12 +63,10 @@ export default function LoginPage() {
                 </div>
                 <input
                   type={showPassword ? 'text' : 'password'}
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
+                  name="password"
                   className="block w-full pl-10 pr-10 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   placeholder="パスワードを入力"
                   required
-                  disabled={isPending}
                   autoComplete="current-password"
                 />
                 <button
@@ -96,36 +83,30 @@ export default function LoginPage() {
               </div>
             </div>
 
-            {error && (
+            {errorMessage && (
               <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
-                <p className="text-sm text-red-600">{error}</p>
+                <p className="text-sm text-red-600">{errorMessage}</p>
               </div>
             )}
 
             <button
               type="submit"
-              disabled={isPending}
-              className={`w-full flex items-center justify-center gap-2 py-3 px-4 rounded-lg font-medium text-white transition-all ${
-                isPending
-                  ? 'bg-gray-400 cursor-not-allowed'
-                  : 'bg-gradient-to-r from-blue-600 to-cyan-500 hover:from-blue-700 hover:to-cyan-600 shadow-lg hover:shadow-xl'
-              }`}
+              className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-lg font-medium text-white bg-gradient-to-r from-blue-600 to-cyan-500 hover:from-blue-700 hover:to-cyan-600 shadow-lg hover:shadow-xl transition-all"
             >
-              {isPending ? (
-                <>
-                  <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                  <span>ログイン中...</span>
-                </>
-              ) : (
-                <>
-                  <LogIn className="h-5 w-5" />
-                  <span>ログイン</span>
-                </>
-              )}
+              <LogIn className="h-5 w-5" />
+              <span>ログイン</span>
             </button>
           </form>
         </div>
       </div>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense>
+      <LoginForm />
+    </Suspense>
   );
 }

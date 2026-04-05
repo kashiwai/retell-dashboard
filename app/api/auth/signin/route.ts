@@ -1,44 +1,71 @@
-import { createServerClient } from '@supabase/ssr'
 import { NextRequest, NextResponse } from 'next/server'
 
 export async function POST(request: NextRequest) {
-  const { email, password } = await request.json()
+  const formData = await request.formData().catch(() => null)
+  let email: string, password: string
 
-  const cookiesToSet: { name: string; value: string; options: Record<string, unknown> }[] = []
+  if (formData) {
+    email = formData.get('email') as string
+    password = formData.get('password') as string
+  } else {
+    const body = await request.json().catch(() => ({}))
+    email = body.email
+    password = body.password
+  }
 
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+  if (!email || !password) {
+    return NextResponse.redirect(new URL('/login?error=missing', request.url))
+  }
+
+  // Supabase Auth REST API で直接認証
+  const res = await fetch(
+    `${process.env.NEXT_PUBLIC_SUPABASE_URL}/auth/v1/token?grant_type=password`,
     {
-      cookies: {
-        getAll() {
-          return request.cookies.getAll()
-        },
-        setAll(cookies) {
-          cookies.forEach(c => cookiesToSet.push(c))
-        },
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'apikey': process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
       },
+      body: JSON.stringify({ email, password }),
     }
   )
 
-  const { data, error } = await supabase.auth.signInWithPassword({ email, password })
-
-  if (error) {
-    return NextResponse.json(
-      { error: 'メールアドレスまたはパスワードが正しくありません' },
-      { status: 401 }
-    )
+  if (!res.ok) {
+    return NextResponse.redirect(new URL('/login?error=invalid', request.url))
   }
 
-  const role = data.user.user_metadata?.role ?? 'user'
+  const session = await res.json()
+  const user = session?.user
+  if (!user) {
+    return NextResponse.redirect(new URL('/login?error=invalid', request.url))
+  }
+
+  const role = user.user_metadata?.role ?? 'tenant'
   const redirectPath = role === 'superadmin' ? '/admin/tenants' : '/dashboard'
 
-  const res = NextResponse.json({ success: true, role, redirectPath })
+  // 302リダイレクト + Set-Cookie（ブラウザが確実に処理する）
+  const response = NextResponse.redirect(new URL(redirectPath, request.url))
 
-  // サーバーサイドでクッキーを設定（middlewareが確実に読めるようにする）
-  cookiesToSet.forEach(({ name, value, options }) => {
-    res.cookies.set(name, value, options as Parameters<typeof res.cookies.set>[2])
+  response.cookies.set('ts_session', JSON.stringify({
+    uid: user.id,
+    email: user.email,
+    role,
+    exp: Date.now() + 24 * 60 * 60 * 1000,
+  }), {
+    httpOnly: true,
+    secure: true,
+    sameSite: 'lax',
+    maxAge: 86400,
+    path: '/',
   })
 
-  return res
+  response.cookies.set('sb_access_token', session.access_token, {
+    httpOnly: true,
+    secure: true,
+    sameSite: 'lax',
+    maxAge: session.expires_in || 3600,
+    path: '/',
+  })
+
+  return response
 }
