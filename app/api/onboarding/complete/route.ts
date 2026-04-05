@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import Retell from 'retell-sdk'
-import OpenAI from 'openai'
+import Anthropic from '@anthropic-ai/sdk'
 
 export const dynamic = 'force-dynamic'
 
@@ -79,11 +79,11 @@ export async function POST(request: NextRequest) {
 }
 
 async function generateScript(data: OnboardingData): Promise<string> {
-  if (!process.env.OPENAI_API_KEY) {
+  if (!process.env.ANTHROPIC_API_KEY) {
     return buildFallbackScript(data)
   }
 
-  const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
+  const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
 
   const inboundSection = data.inbound ? `
 【受電設定】
@@ -121,14 +121,14 @@ ${outboundSection}
 プロンプトのみを出力してください（説明文は不要）。
 `.trim()
 
-  const response = await openai.chat.completions.create({
-    model: 'gpt-4o',
-    messages: [{ role: 'user', content: prompt }],
-    temperature: 0.7,
+  const response = await anthropic.messages.create({
+    model: 'claude-sonnet-4-6',
     max_tokens: 2000,
+    messages: [{ role: 'user', content: prompt }],
   })
 
-  return response.choices[0].message.content ?? buildFallbackScript(data)
+  const text = response.content[0].type === 'text' ? response.content[0].text : null
+  return text ?? buildFallbackScript(data)
 }
 
 function buildFallbackScript(data: OnboardingData): string {

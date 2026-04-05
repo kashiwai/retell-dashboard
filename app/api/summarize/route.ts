@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import OpenAI from 'openai';
+import Anthropic from '@anthropic-ai/sdk';
 
 // Force dynamic rendering
 export const dynamic = 'force-dynamic';
@@ -15,16 +15,16 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Check for OpenAI API key
-    if (!process.env.OPENAI_API_KEY) {
-      // If no OpenAI API key, use fallback summarization
+    // Check for Anthropic API key
+    if (!process.env.ANTHROPIC_API_KEY) {
+      // If no Anthropic API key, use fallback summarization
       const fallbackSummary = generateFallbackSummary(transcript, type);
       return NextResponse.json(fallbackSummary);
     }
 
-    // Initialize OpenAI client
-    const openai = new OpenAI({
-      apiKey: process.env.OPENAI_API_KEY
+    // Initialize Anthropic client
+    const anthropic = new Anthropic({
+      apiKey: process.env.ANTHROPIC_API_KEY
     });
 
     let systemPrompt = '';
@@ -76,17 +76,14 @@ ${transcript}
         userPrompt = transcript;
     }
 
-    const completion = await openai.chat.completions.create({
-      model: 'gpt-3.5-turbo',
-      messages: [
-        { role: 'system', content: systemPrompt },
-        { role: 'user', content: userPrompt }
-      ],
-      temperature: 0.3,
-      max_tokens: 500
+    const completion = await anthropic.messages.create({
+      model: 'claude-haiku-4-5-20251001',
+      max_tokens: 500,
+      system: systemPrompt,
+      messages: [{ role: 'user', content: userPrompt }],
     });
 
-    const result = completion.choices[0].message.content || '';
+    const result = completion.content[0].type === 'text' ? completion.content[0].text : '';
 
     // Parse the result based on type
     let response: any = {};
