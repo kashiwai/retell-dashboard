@@ -46,7 +46,7 @@ export async function POST(request: NextRequest) {
 
     const retellClient = new Retell({ apiKey: process.env.RETELL_API_KEY });
 
-    const call = await retellClient.call.createPhoneCall({
+    const callParams: Record<string, unknown> = {
       to_number,
       from_number,
       metadata: metadata || {},
@@ -55,7 +55,14 @@ export async function POST(request: NextRequest) {
         company_name: metadata?.company_name || '弊社',
         current_time: new Date().toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' })
       }
-    } as any);
+    };
+
+    // エージェント指定がある場合はオーバーライド
+    if (agent_id) {
+      callParams.override_agent_id = agent_id;
+    }
+
+    const call = await retellClient.call.createPhoneCall(callParams as any);
 
     return NextResponse.json({
       success: true,
