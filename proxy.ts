@@ -9,7 +9,7 @@ const PUBLIC_PATHS = [
   '/api/webhook/retell',
   '/api/line/webhook',
   '/api/notify/line',
-  '/api/twiml/',        // Twilio が認証なしで叩く停止メッセージエンドポイント
+  '/api/twiml/',        // Twilio が認証なしで叩くエンドポイント
 ]
 
 export async function proxy(request: NextRequest) {
