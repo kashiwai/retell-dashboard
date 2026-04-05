@@ -1,15 +1,17 @@
-import { createClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
 
-export async function POST() {
-  const supabase = await createClient()
-  await supabase.auth.signOut()
-  return NextResponse.json({ success: true })
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://retell-dashboard-opal.vercel.app'
+
+function clearSession(res: NextResponse) {
+  res.cookies.set('ts_session', '', { maxAge: 0, path: '/' })
+  res.cookies.set('sb_access_token', '', { maxAge: 0, path: '/' })
+  return res
 }
 
-// GET: Linkタグからのログアウト対応
+export async function POST() {
+  return clearSession(NextResponse.json({ success: true }))
+}
+
 export async function GET() {
-  const supabase = await createClient()
-  await supabase.auth.signOut()
-  return NextResponse.redirect(new URL('/login', process.env.NEXT_PUBLIC_APP_URL || 'https://retell-dashboard-opal.vercel.app'))
+  return clearSession(NextResponse.redirect(new URL('/login', APP_URL)))
 }

@@ -22,6 +22,18 @@ export async function createClient() {
           }
         },
       },
+      global: {
+        // sb_access_tokenクッキーがあればそれをBearerトークンとして使う
+        fetch: async (url, options = {}) => {
+          const accessToken = cookieStore.get('sb_access_token')?.value
+          if (accessToken) {
+            const headers = new Headers(options.headers)
+            headers.set('Authorization', `Bearer ${accessToken}`)
+            return fetch(url, { ...options, headers })
+          }
+          return fetch(url, options)
+        },
+      },
     }
   )
 }
