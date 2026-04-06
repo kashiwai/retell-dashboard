@@ -1,19 +1,37 @@
 'use client';
 
 import { useState } from 'react';
-import { useSearchParams } from 'next/navigation';
 import { Lock, Mail, Eye, EyeOff, LogIn } from 'lucide-react';
 import { Suspense } from 'react';
+import { signInAction } from './actions';
 
 function LoginForm() {
   const [showPassword, setShowPassword] = useState(false);
-  const searchParams = useSearchParams();
-  const errorCode = searchParams.get('error');
+  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
 
-  const errorMessage =
-    errorCode === 'invalid' ? 'メールアドレスまたはパスワードが正しくありません' :
-    errorCode === 'missing' ? 'メールアドレスとパスワードを入力してください' :
-    errorCode ? 'ログインに失敗しました' : null;
+  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    setLoading(true);
+    setError(null);
+
+    const formData = new FormData(e.currentTarget);
+    const email = formData.get('email') as string;
+    const password = formData.get('password') as string;
+
+    if (!email || !password) {
+      setError('メールアドレスとパスワードを入力してください');
+      setLoading(false);
+      return;
+    }
+
+    const result = await signInAction(email, password);
+    if (result?.error) {
+      setError(result.error);
+      setLoading(false);
+    }
+    // 成功時はServer Actionのredirect()がナビゲーションを処理
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-600 via-blue-500 to-cyan-400 flex items-center justify-center p-4">
@@ -32,8 +50,7 @@ function LoginForm() {
             <p className="text-blue-100">AI受付管理システム</p>
           </div>
 
-          {/* Login Form — ネイティブPOSTで/api/auth/signinへ送信 */}
-          <form action="/api/auth/signin" method="POST" className="p-8 space-y-6">
+          <form onSubmit={handleSubmit} className="p-8 space-y-6">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 メールアドレス
@@ -83,18 +100,19 @@ function LoginForm() {
               </div>
             </div>
 
-            {errorMessage && (
+            {error && (
               <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
-                <p className="text-sm text-red-600">{errorMessage}</p>
+                <p className="text-sm text-red-600">{error}</p>
               </div>
             )}
 
             <button
               type="submit"
-              className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-lg font-medium text-white bg-gradient-to-r from-blue-600 to-cyan-500 hover:from-blue-700 hover:to-cyan-600 shadow-lg hover:shadow-xl transition-all"
+              disabled={loading}
+              className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-lg font-medium text-white bg-gradient-to-r from-blue-600 to-cyan-500 hover:from-blue-700 hover:to-cyan-600 shadow-lg hover:shadow-xl transition-all disabled:opacity-60"
             >
               <LogIn className="h-5 w-5" />
-              <span>ログイン</span>
+              <span>{loading ? '認証中...' : 'ログイン'}</span>
             </button>
           </form>
         </div>
