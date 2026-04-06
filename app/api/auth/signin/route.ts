@@ -19,7 +19,7 @@ export async function POST(request: NextRequest) {
   }
 
   if (!email || !password) {
-    return NextResponse.redirect(new URL('/login?error=missing', request.url))
+    return NextResponse.redirect(new URL('/login?error=missing', request.url), 303)
   }
 
   // Supabase Auth REST API で直接認証
@@ -36,20 +36,20 @@ export async function POST(request: NextRequest) {
   )
 
   if (!res.ok) {
-    return NextResponse.redirect(new URL('/login?error=invalid', request.url))
+    return NextResponse.redirect(new URL('/login?error=invalid', request.url), 303)
   }
 
   const session = await res.json()
   const user = session?.user
   if (!user) {
-    return NextResponse.redirect(new URL('/login?error=invalid', request.url))
+    return NextResponse.redirect(new URL('/login?error=invalid', request.url), 303)
   }
 
   const role = user.user_metadata?.role ?? 'tenant'
   const redirectPath = role === 'superadmin' ? '/admin/tenants' : '/dashboard'
 
-  // 302リダイレクト + Set-Cookie（ブラウザが確実に処理する）
-  const response = NextResponse.redirect(new URL(redirectPath, request.url))
+  // 303リダイレクト + Set-Cookie（POSTからGETへ変換、ブラウザが確実に処理する）
+  const response = NextResponse.redirect(new URL(redirectPath, request.url), 303)
 
   response.cookies.set('ts_session', JSON.stringify({
     uid: user.id,
