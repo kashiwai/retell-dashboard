@@ -1,5 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
 
+// GETで直接アクセスされた場合はログインページへ
+export async function GET() {
+  return NextResponse.redirect(new URL('/login', process.env.NEXT_PUBLIC_APP_URL!))
+}
+
 export async function POST(request: NextRequest) {
   const formData = await request.formData().catch(() => null)
   let email: string, password: string
