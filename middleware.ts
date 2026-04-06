@@ -12,7 +12,7 @@ const PUBLIC_PATHS = [
   '/api/health-demo/',
 ]
 
-export function proxy(request: NextRequest) {
+export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
 
   // 公開パスはスキップ
