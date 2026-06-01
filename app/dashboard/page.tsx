@@ -1,245 +1,176 @@
 'use client'
 
-import { useEffect, useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useState } from 'react'
 import Link from 'next/link'
-import type { Tenant } from '@/lib/supabase/types'
 
-interface KPI {
-  month: string
-  totalCalls: number
-  resolved: number
-  escalated: number
-  resolutionRate: number
-  escalationRate: number
-  avgDurationMin: number
-  growthRate: number | null
-  faultDistribution: { code: string; count: number }[]
-  daily: { date: string; count: number }[]
+interface Call {
+  id: string; caller_name: string; caller_topic: string
+  phone: string; duration: string
+  status: 'active' | 'waiting'
+  ai_status: 'ai' | 'transfer' | 'waiting'
+  agent: string
 }
 
-export default function TenantDashboardPage() {
-  const router = useRouter()
-  const [tenant, setTenant] = useState<Tenant | null>(null)
-  const [kpi, setKpi] = useState<KPI | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+const MOCK_CALLS: Call[] = [
+  { id:'1', caller_name:'佐藤 美咲', caller_topic:'初回購入について',   phone:'080-1234-5678', duration:'00:01:24', status:'active',  ai_status:'ai',       agent:'セールスサポートAI' },
+  { id:'2', caller_name:'鈴木 大輔', caller_topic:'配送状況の確認',     phone:'090-2345-6789', duration:'00:02:15', status:'active',  ai_status:'ai',       agent:'カスタマーサポートAI' },
+  { id:'3', caller_name:'高橋 由紀', caller_topic:'返品・交換について', phone:'070-3456-7890', duration:'00:00:45', status:'active',  ai_status:'transfer', agent:'カスタマーサポートAI' },
+  { id:'4', caller_name:'伊藤 健一', caller_topic:'支払い方法の変更',   phone:'080-4567-8901', duration:'00:01:58', status:'active',  ai_status:'ai',       agent:'ファイナンスAI' },
+  { id:'5', caller_name:'渡辺 麻衣', caller_topic:'商品詳細の確認',     phone:'090-5678-9012', duration:'00:03:22', status:'active',  ai_status:'transfer', agent:'セールスサポートAI' },
+  { id:'6', caller_name:'中村 翔太', caller_topic:'会員登録について',   phone:'070-6789-0123', duration:'00:00:00', status:'waiting', ai_status:'waiting',  agent:'-' },
+  { id:'7', caller_name:'小林 愛子', caller_topic:'クーポンの使い方',   phone:'080-7890-1234', duration:'00:00:00', status:'waiting', ai_status:'waiting',  agent:'-' },
+]
 
-  const thisMonth = new Date().toISOString().slice(0, 7)
+const KPI = [
+  { icon:'📞', label:'本日の総通話数', value:'98',   unit:'件', sub:'昨日より +12%',  subColor:'#1FBF75', bg:'rgba(1,201,253,0.15)',   color:'#01C9FD' },
+  { icon:'⏱',  label:'平均応答時間',  value:'2.3',  unit:'秒', sub:'目標：3秒以内',  subColor:'#1FBF75', bg:'rgba(1,201,253,0.15)',   color:'#01C9FD' },
+  { icon:'📊', label:'AI解決率',      value:'76.5', unit:'%',  sub:'目標：80%以上',  subColor:'#F5A623', bg:'rgba(31,191,117,0.15)', color:'#1FBF75' },
+  { icon:'👥', label:'転送率',        value:'23.5', unit:'%',  sub:'目標：20%以下',  subColor:'#FD7783', bg:'rgba(253,119,131,0.15)', color:'#FD7783' },
+]
 
-  useEffect(() => {
-    const load = async () => {
-      // テナント情報取得
-      const tenantRes = await fetch('/api/me/tenant')
-      if (tenantRes.status === 401) { router.push('/login'); return }
-      if (tenantRes.status === 404) { setError('テナントが見つかりません。管理者にお問い合わせください。'); setLoading(false); return }
-      if (!tenantRes.ok) { setError('テナント情報の取得に失敗しました'); setLoading(false); return }
+const NAVS = [
+  { href:'/dashboard', label:'ライブモニタリング', icon:'📊', active:true  },
+  { href:'/dashboard', label:'ダッシュボード',     icon:'◼',  active:false },
+  { href:'/dashboard/calls', label:'通話履歴',     icon:'📞', active:false },
+  { href:'/dashboard', label:'分析レポート',       icon:'📈', active:false },
+  { href:'/dashboard', label:'AIエージェント',     icon:'🤖', active:false },
+  { href:'/dashboard', label:'ナレッジベース',     icon:'📚', active:false },
+  { href:'/dashboard', label:'設定',               icon:'⚙',  active:false },
+]
 
-      const { tenant: t } = await tenantRes.json()
-      setTenant(t)
+const COLORS = ['#01C9FD','#FD7783','#1FBF75','#F5A623','#00A5FD','#FD4B83','#4FE0FF']
 
-      // オンボーディング未完了なら誘導
-      if (t.status === 'active' && t.onboarding_completed === false) {
-        router.push('/onboarding')
-        return
-      }
-
-      // KPI取得
-      const kpiRes = await fetch(`/api/dashboard/kpi?tenant_id=${t.id}&month=${thisMonth}`)
-      if (kpiRes.ok) {
-        setKpi(await kpiRes.json())
-      }
-      setLoading(false)
-    }
-    load()
-  }, [router, thisMonth])
-
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600" />
-      </div>
-    )
-  }
-
-  if (error) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-6">
-        <div className="bg-white rounded-xl border p-8 text-center max-w-md">
-          <div className="text-4xl mb-4">⚠️</div>
-          <p className="text-gray-700">{error}</p>
-        </div>
-      </div>
-    )
-  }
+export default function LiveMonitoringPage() {
+  const [calls] = useState<Call[]>(MOCK_CALLS)
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* ヘッダー */}
-      <div className="bg-white border-b px-6 py-4 flex items-center justify-between">
-        <div>
-          <h1 className="text-xl font-bold text-gray-900">{tenant?.company_name}</h1>
-          <p className="text-sm text-gray-500 mt-0.5">AI受付ダッシュボード — {thisMonth}</p>
-        </div>
-        <div className="flex items-center gap-3">
-          <Link
-            href="/dashboard/billing"
-            className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200"
-          >
-            料金・利用状況
-          </Link>
-          <Link
-            href="/dashboard/calls"
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700"
-          >
-            通話履歴
-          </Link>
-          <Link href="/api/auth/logout" className="text-gray-500 hover:text-gray-700 text-sm">
-            ログアウト
-          </Link>
-        </div>
-      </div>
+    <div className="flex min-h-screen" style={{ background:'#0E1530' }}>
 
-      <div className="max-w-5xl mx-auto px-6 py-8 space-y-6">
-        {/* 停止中バナー */}
-        {tenant?.status === 'suspended' && (
-          <div className="bg-red-50 border border-red-200 rounded-xl p-4 flex items-center justify-between">
-            <div>
-              <p className="text-red-800 font-semibold">サービスが停止されています</p>
-              <p className="text-red-600 text-sm">月額利用上限に達したため受発信が停止されました。</p>
-            </div>
-            <Link
-              href="/dashboard/billing"
-              className="px-4 py-2 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 whitespace-nowrap"
-            >
-              詳細を確認
+      {/* SIDEBAR */}
+      <aside className="hidden w-52 shrink-0 sm:flex flex-col" style={{ background:'linear-gradient(180deg,#111a3e,#0a1228)', borderRight:'1px solid rgba(255,255,255,0.07)' }}>
+        <div className="px-5 pt-5 pb-4">
+          <Link href="/dashboard" className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded-xl flex items-center justify-center font-bold text-xs flex-shrink-0" style={{ background:'linear-gradient(135deg,#01C9FD,#FD7783)', color:'#0E1530' }}>M</div>
+            <span className="font-bold text-sm" style={{ background:'linear-gradient(135deg,#01C9FD,#FD7783)', WebkitBackgroundClip:'text', WebkitTextFillColor:'transparent' }}>MIKATA</span>
+          </Link>
+        </div>
+        <div className="mx-3 mb-3 px-3 py-2 rounded-xl flex items-center gap-2 cursor-pointer" style={{ background:'rgba(255,255,255,0.05)', border:'1px solid rgba(255,255,255,0.08)' }}>
+          <span className="text-xs text-white truncate flex-1">株式会社ミカタ</span>
+          <span style={{ color:'rgba(240,244,255,0.4)', fontSize:10 }}>▾</span>
+        </div>
+        <nav className="flex-1 px-2 flex flex-col gap-0.5">
+          {NAVS.map((n) => (
+            <Link key={n.label} href={n.href} className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-all"
+              style={n.active ? { background:'rgba(1,201,253,0.12)', border:'1px solid rgba(1,201,253,0.25)', color:'#01C9FD', fontWeight:600 } : { border:'1px solid transparent', color:'rgba(240,244,255,0.6)' }}>
+              <span style={{ fontSize:14 }}>{n.icon}</span>{n.label}
             </Link>
-          </div>
-        )}
-
-        {/* KPIカード */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          {[
-            {
-              label: '今月の通話件数',
-              value: kpi?.totalCalls ?? 0,
-              unit: '件',
-              sub: kpi?.growthRate != null
-                ? `先月比 ${kpi.growthRate >= 0 ? '+' : ''}${kpi.growthRate}%`
-                : undefined,
-              color: 'blue',
-            },
-            {
-              label: '解決率',
-              value: kpi?.resolutionRate ?? 0,
-              unit: '%',
-              sub: `${kpi?.resolved ?? 0}件 解決`,
-              color: 'green',
-            },
-            {
-              label: 'エスカレーション率',
-              value: kpi?.escalationRate ?? 0,
-              unit: '%',
-              sub: `${kpi?.escalated ?? 0}件`,
-              color: kpi && kpi.escalationRate > 20 ? 'orange' : 'gray',
-            },
-            {
-              label: '平均対応時間',
-              value: kpi?.avgDurationMin ?? 0,
-              unit: '分',
-              sub: '1通話あたり',
-              color: 'purple',
-            },
-          ].map(({ label, value, unit, sub, color }) => (
-            <div key={label} className="bg-white rounded-xl border p-6">
-              <div className={`text-3xl font-bold text-${color}-600`}>
-                {value}<span className="text-lg ml-0.5">{unit}</span>
-              </div>
-              <div className="text-sm text-gray-500 mt-1">{label}</div>
-              {sub && <div className="text-xs text-gray-400 mt-0.5">{sub}</div>}
-            </div>
           ))}
+        </nav>
+        <div className="p-4 border-t" style={{ borderColor:'rgba(255,255,255,0.07)' }}>
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs flex-shrink-0" style={{ background:'linear-gradient(135deg,#01C9FD,#FD7783)', color:'#0E1530' }}>田</div>
+            <div>
+              <p className="text-xs font-semibold text-white">田中 花子</p>
+              <p className="text-[10px]" style={{ color:'#1FBF75' }}>● オペレーター</p>
+            </div>
+          </div>
+        </div>
+      </aside>
+
+      {/* MAIN */}
+      <div className="flex-1 flex flex-col min-w-0">
+        {/* Topbar */}
+        <div className="flex items-center justify-between px-8 py-4 border-b" style={{ borderColor:'rgba(255,255,255,0.07)' }}>
+          <div>
+            <div className="flex items-center gap-3">
+              <h1 className="text-xl font-bold text-white">ライブモニタリング</h1>
+              <span className="flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold" style={{ background:'rgba(253,75,107,0.2)', color:'#FD4B6B', border:'1px solid rgba(253,75,107,0.3)' }}>
+                <span className="live-pulse w-1.5 h-1.5 rounded-full inline-block" style={{ background:'#FD4B6B' }}/>LIVE
+              </span>
+            </div>
+            <p className="text-xs mt-0.5" style={{ color:'rgba(240,244,255,0.45)' }}>リアルタイムの通話状況を監視しています</p>
+          </div>
+          <div className="flex items-center gap-2">
+            {['▼ フィルター','すべてのチャンネル ▾','↻'].map((t) => (
+              <button key={t} className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm" style={{ background:'rgba(255,255,255,0.06)', border:'1px solid rgba(255,255,255,0.1)', color:'rgba(240,244,255,0.7)' }}>{t}</button>
+            ))}
+          </div>
         </div>
 
-        {/* 日別件数バーチャート */}
-        {kpi && kpi.daily.length > 0 && (
-          <div className="bg-white rounded-xl border p-6">
-            <h2 className="text-base font-semibold text-gray-900 mb-4">日別通話件数</h2>
-            <div className="flex items-end gap-1 h-32">
-              {kpi.daily.map(({ date, count }) => {
-                const max = Math.max(...kpi.daily.map(d => d.count), 1)
-                const heightPct = Math.max((count / max) * 100, 4)
-                return (
-                  <div key={date} className="flex-1 flex flex-col items-center gap-1">
-                    <span className="text-xs text-gray-500">{count}</span>
-                    <div
-                      className="w-full bg-blue-500 rounded-t"
-                      style={{ height: `${heightPct}%` }}
-                    />
-                    <span className="text-xs text-gray-400 rotate-45 origin-left whitespace-nowrap">
-                      {date.slice(5)}
-                    </span>
+        <div className="px-8 py-6 flex-1">
+          {/* KPI */}
+          <div className="grid grid-cols-4 gap-4 mb-6">
+            {KPI.map((k) => (
+              <div key={k.label} className="p-5 rounded-3xl" style={{ background:'rgba(255,255,255,0.04)', border:'1px solid rgba(255,255,255,0.08)' }}>
+                <div className="w-10 h-10 rounded-2xl flex items-center justify-center text-lg mb-3" style={{ background:k.bg }}><span style={{ color:k.color }}>{k.icon}</span></div>
+                <p className="text-3xl font-bold text-white">{k.value}<span className="text-lg font-normal ml-0.5" style={{ color:'rgba(240,244,255,0.5)' }}>{k.unit}</span></p>
+                <p className="text-xs mt-0.5" style={{ color:'rgba(240,244,255,0.45)' }}>{k.label}</p>
+                <p className="text-xs mt-1 font-medium" style={{ color:k.subColor }}>{k.sub}</p>
+              </div>
+            ))}
+          </div>
+
+          {/* Table */}
+          <div className="rounded-3xl overflow-hidden" style={{ background:'rgba(255,255,255,0.04)', border:'1px solid rgba(255,255,255,0.08)' }}>
+            <div className="flex items-center justify-between px-6 py-4 border-b" style={{ borderColor:'rgba(255,255,255,0.07)' }}>
+              <div className="flex items-center gap-3">
+                <h2 className="font-semibold text-white">リアルタイム通話一覧</h2>
+                <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold" style={{ background:'rgba(1,201,253,0.15)', color:'#01C9FD' }}>
+                  {calls.filter(c=>c.status==='active').length}件の通話中
+                </span>
+              </div>
+              <button className="px-3 py-1.5 rounded-xl text-xs" style={{ background:'rgba(255,255,255,0.05)', border:'1px solid rgba(255,255,255,0.08)', color:'rgba(240,244,255,0.6)' }}>⚙ 表示設定</button>
+            </div>
+
+            {/* Header */}
+            <div className="grid px-6 py-3 text-xs font-semibold" style={{ gridTemplateColumns:'110px 1fr 130px 100px 100px 1fr 48px', color:'rgba(240,244,255,0.4)', borderBottom:'1px solid rgba(255,255,255,0.05)' }}>
+              {['ステータス','発信者','電話番号','経過時間','AI対応状況','AIエージェント',''].map(h=><span key={h}>{h}</span>)}
+            </div>
+
+            {calls.map((c,i) => (
+              <div key={c.id} className="grid items-center px-6 py-3.5 cursor-pointer transition-all"
+                style={{ gridTemplateColumns:'110px 1fr 130px 100px 100px 1fr 48px', borderBottom:'1px solid rgba(255,255,255,0.04)', background:i===0?'rgba(1,201,253,0.04)':'transparent', borderLeft:i===0?'2px solid #01C9FD':'2px solid transparent' }}>
+
+                <div>
+                  {c.status==='active'
+                    ? <span className="flex items-center gap-1.5 text-xs font-semibold" style={{ color:'#01C9FD' }}><span className="live-pulse w-1.5 h-1.5 rounded-full" style={{ background:'#01C9FD' }}/>通話中</span>
+                    : <span className="text-xs" style={{ color:'rgba(240,244,255,0.4)' }}>⊙ 待機中</span>}
+                </div>
+
+                <div className="flex items-center gap-2.5">
+                  <div className="w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0" style={{ background:COLORS[i%COLORS.length], color:'#0E1530' }}>{c.caller_name[0]}</div>
+                  <div>
+                    <p className="text-sm font-semibold text-white">{c.caller_name}</p>
+                    <p className="text-xs" style={{ color:'rgba(240,244,255,0.4)' }}>{c.caller_topic}</p>
                   </div>
-                )
-              })}
+                </div>
+
+                <span className="text-sm" style={{ color:'rgba(240,244,255,0.6)' }}>{c.phone}</span>
+                <span className="text-sm font-mono text-white">{c.duration}</span>
+
+                <div>
+                  {c.ai_status==='ai'       && <span className="badge-active">AI対応中</span>}
+                  {c.ai_status==='transfer' && <span className="badge-transfer">転送中</span>}
+                  {c.ai_status==='waiting'  && <span className="badge-wait">待機中</span>}
+                </div>
+
+                <div>
+                  {c.agent!=='-' ? <><p className="text-xs text-white">{c.agent}</p><p className="text-[10px]" style={{ color:'rgba(240,244,255,0.35)' }}>v2.1.0</p></> : <span className="text-xs" style={{ color:'rgba(240,244,255,0.3)' }}>-</span>}
+                </div>
+
+                <button className="w-7 h-7 rounded-lg flex items-center justify-center" style={{ background:'rgba(255,255,255,0.06)', color:'rgba(240,244,255,0.5)' }}>···</button>
+              </div>
+            ))}
+
+            <div className="flex items-center justify-between px-6 py-4">
+              <p className="text-xs" style={{ color:'rgba(240,244,255,0.4)' }}>全 12 件中 1-12件を表示</p>
+              <div className="flex items-center gap-1">
+                <button className="w-7 h-7 rounded-lg flex items-center justify-center text-xs" style={{ background:'rgba(255,255,255,0.05)', color:'rgba(240,244,255,0.4)' }}>‹</button>
+                <button className="w-7 h-7 rounded-lg flex items-center justify-center text-xs font-bold" style={{ background:'#01C9FD', color:'#0E1530' }}>1</button>
+                <button className="w-7 h-7 rounded-lg flex items-center justify-center text-xs" style={{ background:'rgba(255,255,255,0.05)', color:'rgba(240,244,255,0.4)' }}>›</button>
+              </div>
             </div>
           </div>
-        )}
-
-        {/* 故障コード分布 */}
-        {kpi && kpi.faultDistribution.length > 0 && (
-          <div className="bg-white rounded-xl border p-6">
-            <h2 className="text-base font-semibold text-gray-900 mb-4">故障コード分布</h2>
-            <div className="space-y-3">
-              {kpi.faultDistribution.slice(0, 8).map(({ code, count }) => {
-                const maxCount = kpi.faultDistribution[0].count
-                const pct = Math.round((count / maxCount) * 100)
-                return (
-                  <div key={code} className="flex items-center gap-3">
-                    <div className="w-28 text-sm text-gray-600 truncate">{code}</div>
-                    <div className="flex-1 bg-gray-100 rounded-full h-2">
-                      <div
-                        className="bg-blue-500 h-2 rounded-full"
-                        style={{ width: `${pct}%` }}
-                      />
-                    </div>
-                    <div className="w-8 text-sm text-gray-500 text-right">{count}</div>
-                  </div>
-                )
-              })}
-            </div>
-          </div>
-        )}
-
-        {/* データなし */}
-        {kpi && kpi.totalCalls === 0 && (
-          <div className="bg-white rounded-xl border p-12 text-center text-gray-400">
-            <div className="text-4xl mb-3">📞</div>
-            <p>今月の通話データはまだありません</p>
-          </div>
-        )}
-
-        {/* 設定情報 */}
-        <div className="bg-white rounded-xl border p-6">
-          <h2 className="text-base font-semibold text-gray-900 mb-4">契約情報</h2>
-          <dl className="grid grid-cols-2 gap-3 text-sm">
-            <div>
-              <dt className="text-gray-500">050番号</dt>
-              <dd className="font-mono mt-0.5 text-green-700">{tenant?.phone_number ?? '未発行'}</dd>
-            </div>
-            <div>
-              <dt className="text-gray-500">プラン</dt>
-              <dd className="mt-0.5">{tenant?.plan === 'trial' ? 'トライアル' : tenant?.plan}</dd>
-            </div>
-            <div>
-              <dt className="text-gray-500">月額基本料</dt>
-              <dd className="mt-0.5">¥{tenant?.monthly_fee.toLocaleString()}</dd>
-            </div>
-            <div>
-              <dt className="text-gray-500">分単価</dt>
-              <dd className="mt-0.5">¥{tenant?.minute_rate}/分</dd>
-            </div>
-          </dl>
         </div>
       </div>
     </div>

@@ -1,8 +1,17 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  /* MIKATA統一デザイン — ダークネイビー */
+  --background: #0E1530;
+  --foreground: #F0F4FF;
+  --card: rgba(255,255,255,0.05);
+  --border: rgba(255,255,255,0.09);
+  --muted: rgba(240,244,255,0.5);
+  --primary: #01C9FD;
+  --coral: #FD7783;
+  --navy: #0E1530;
+  --navy-2: #111a3e;
+  --radius: 16px;
 }
 
 @theme inline {
@@ -12,24 +21,82 @@
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
-
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: "Inter", "Noto Sans JP", Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
 }
 
-/* Fix input text color */
+/* MIKATAグラデーションテキスト */
+.mk-gradient {
+  background: linear-gradient(135deg, #01C9FD 0%, #00A5FD 50%, #FD7783 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* ガラスカード */
+.mk-card {
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.09);
+  border-radius: 20px;
+  backdrop-filter: blur(12px);
+}
+
+.mk-card:hover {
+  background: rgba(255,255,255,0.08);
+  border-color: rgba(1,201,253,0.25);
+}
+
+/* ステータスバッジ */
+.badge-active {
+  background: rgba(1,201,253,0.15);
+  color: #01C9FD;
+  border: 1px solid rgba(1,201,253,0.3);
+  border-radius: 999px;
+  padding: 2px 10px;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.badge-transfer {
+  background: rgba(245,166,35,0.15);
+  color: #F5A623;
+  border: 1px solid rgba(245,166,35,0.3);
+  border-radius: 999px;
+  padding: 2px 10px;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.badge-wait {
+  background: rgba(240,244,255,0.08);
+  color: rgba(240,244,255,0.5);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 999px;
+  padding: 2px 10px;
+  font-size: 11px;
+}
+
+/* スクロールバー非表示 */
+::-webkit-scrollbar { width: 4px; height: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 999px; }
+
 input, textarea, select {
-  color: #000000 !important;
+  color: #F0F4FF !important;
+  background: rgba(255,255,255,0.06) !important;
+  border: 1px solid rgba(255,255,255,0.1) !important;
+  border-radius: 12px !important;
 }
 
-input::placeholder {
-  color: #9ca3af !important;
+input::placeholder, textarea::placeholder {
+  color: rgba(240,244,255,0.35) !important;
 }
+
+@keyframes pulse-live {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+.live-pulse { animation: pulse-live 2s infinite; }
