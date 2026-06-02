@@ -22,13 +22,13 @@ interface DashboardStats {
 }
 
 const NAVS = [
-  { href:'/dashboard', label:'ライブモニタリング', icon:'📊', active:true },
-  { href:'/dashboard', label:'ダッシュボード',     icon:'◼' },
-  { href:'/dashboard/calls', label:'通話履歴',     icon:'📞' },
-  { href:'/dashboard', label:'分析レポート',       icon:'📈' },
-  { href:'/dashboard', label:'AIエージェント',     icon:'🤖' },
-  { href:'/dashboard', label:'ナレッジベース',     icon:'📚' },
-  { href:'/dashboard', label:'設定',               icon:'⚙'  },
+  { href:'/dashboard',                    label:'ライブモニタリング', icon:'📊', active:true },
+  { href:'/dashboard',                    label:'ダッシュボード',     icon:'◼' },
+  { href:'/dashboard/calls',              label:'通話履歴',           icon:'📞' },
+  { href:'/dashboard/analytics',          label:'分析レポート',       icon:'📈' },
+  { href:'/dashboard/agents',             label:'AIエージェント',     icon:'🤖' },
+  { href:'/dashboard/knowledge-base',     label:'ナレッジベース',     icon:'📚' },
+  { href:'/dashboard',                    label:'設定',               icon:'⚙'  },
 ]
 
 const COLORS = ['#01C9FD','#FD7783','#1FBF75','#F5A623','#00A5FD','#FD4B83','#4FE0FF']
