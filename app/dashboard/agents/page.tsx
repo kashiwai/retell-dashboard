@@ -82,7 +82,7 @@ export default function AgentsPage() {
                           style={{ background: 'rgba(31,191,117,0.15)', color: '#1FBF75' }}>稼働中</span>
                       </div>
                       <p className="text-xs" style={{ color: 'rgba(240,244,255,0.4)' }}>
-                        ID: {agent.agent_id.slice(0, 16)}...
+                        ID: {(agent.agent_id ?? '').slice(0, 16)}...
                       </p>
                     </div>
                   </div>
