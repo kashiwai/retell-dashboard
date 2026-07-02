@@ -39,18 +39,21 @@ function b64url(buf: Buffer | string): string {
   return Buffer.from(buf).toString('base64url');
 }
 
-// サービスアカウントJWT → アクセストークン
+// アクセストークンをプロセス内でキャッシュ(有効1h)。
+// ウォームなServerlessインスタンスでは2回目以降トークン取得の往復を省け、通話中の待ち時間を短縮する。
+let tokenCache: { token: string; exp: number; key: string } | null = null;
+
+// サービスアカウントJWT → アクセストークン(キャッシュ付き)
 async function getAccessToken(): Promise<string> {
   const c = gcalConfig();
   const now = Math.floor(Date.now() / 1000);
+  const key = c.clientEmail + '|' + c.subject;
+  if (tokenCache && tokenCache.key === key && tokenCache.exp - 120 > now) {
+    return tokenCache.token; // 期限まで2分以上あれば再利用
+  }
+
   const header = { alg: 'RS256', typ: 'JWT' };
-  const claim: Record<string, any> = {
-    iss: c.clientEmail,
-    scope: SCOPE,
-    aud: TOKEN_URL,
-    iat: now,
-    exp: now + 3600,
-  };
+  const claim: Record<string, any> = { iss: c.clientEmail, scope: SCOPE, aud: TOKEN_URL, iat: now, exp: now + 3600 };
   if (c.subject) claim.sub = c.subject; // DWD時のみ代理ユーザー
 
   const unsigned = `${b64url(JSON.stringify(header))}.${b64url(JSON.stringify(claim))}`;
@@ -60,15 +63,13 @@ async function getAccessToken(): Promise<string> {
   const res = await fetch(TOKEN_URL, {
     method: 'POST',
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-    body: new URLSearchParams({
-      grant_type: 'urn:ietf:params:oauth:grant-type:jwt-bearer',
-      assertion: jwt,
-    }).toString(),
+    body: new URLSearchParams({ grant_type: 'urn:ietf:params:oauth:grant-type:jwt-bearer', assertion: jwt }).toString(),
   });
   const j = await res.json();
   if (!res.ok || !j.access_token) {
     throw new Error(`token error: ${j.error_description || j.error || res.status}`);
   }
+  tokenCache = { token: j.access_token, exp: now + (j.expires_in || 3600), key };
   return j.access_token as string;
 }
 
@@ -129,12 +130,12 @@ export async function getAvailableSlots(maxSlots = 4, daysAhead = 7): Promise<Sl
 
     // 現地日付 (YYYY-MM-DD)
     const ymd = new Intl.DateTimeFormat('en-CA', { timeZone: c.timeZone, year: 'numeric', month: '2-digit', day: '2-digit' }).format(base);
+    const offset = tzOffsetMinutes(base); // TZオフセットは日毎に1回だけ算出
     for (let h = bhStart; h + c.slotMinutes / 60 <= bhEnd && slots.length < maxSlots; h += c.slotMinutes / 60) {
       const hh = Math.floor(h);
       const mm = Math.round((h - hh) * 60);
       // 現地時刻をUTCに変換
       const localMs = Date.parse(`${ymd}T${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')}:00Z`);
-      const offset = tzOffsetMinutes(base);
       const startMs = localMs - offset * 60000;
       const endMs = startMs + c.slotMinutes * 60000;
       if (startMs <= now.getTime()) continue; // 過去/直近すぎるものは除外
