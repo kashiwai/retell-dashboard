@@ -11,10 +11,24 @@ const PUBLIC_PATHS = [
   '/api/notify/line',
   '/api/twiml/',
   '/api/health-demo/',
+  '/api/recording/', // LINE/Chat通知の「録音を再生」ボタン用(callIdは推測困難な長いランダム値)
+  '/api/tools/', // Retell Custom Function(通話中の予約リンク送信など)用
+  '/api/gcal/', // Retell Custom Function(音声予約: 空き取得・予約確定)用
 ]
+
+// 短縮ドメイン(001001.app)からのアクセスは予約リンクへリダイレクトする。
+// 電話で「ゼロゼロイチ・ゼロゼロイチ・ドットアップ」と口頭案内 → ブラウザで開くと予約ページへ。
+const SHORT_DOMAINS = ['001001.app', 'www.001001.app']
 
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
+
+  // 短縮ドメインへのアクセスは予約ページへ302リダイレクト
+  const host = (request.headers.get('host') || '').toLowerCase()
+  if (SHORT_DOMAINS.includes(host)) {
+    const target = process.env.SHORT_BOOKING_TARGET || 'https://www.callcenter-ai.me'
+    return NextResponse.redirect(target, 302)
+  }
 
   // 公開パスはスキップ
   if (PUBLIC_PATHS.some(p => pathname.startsWith(p))) {
