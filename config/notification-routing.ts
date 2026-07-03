@@ -175,6 +175,11 @@ export const AGENT_NOTIFICATION_CONFIGS: Record<string, AgentNotificationConfig>
     agentId: 'agent_b324ed2cf049a37d90dd532854',
     ...PALDATA_CONFIG,
   },
+  // ---- PALDATA (conversation-flow 版・改善版 / 2026-07) ----
+  agent_8af24798cc8105cb6df18b184d: {
+    agentId: 'agent_8af24798cc8105cb6df18b184d',
+    ...PALDATA_CONFIG,
+  },
 
   // ---- MIKATA 着信受付AI (conversation-flow 版・インバウンド受付) ----
   agent_bc62fad9ee1b47b6a7ed0a988a: {
