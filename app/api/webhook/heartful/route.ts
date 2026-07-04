@@ -1,6 +1,12 @@
-import { Resend } from 'resend';
+let resend: any = null;
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+function getResend() {
+  if (!resend) {
+    const { Resend } = require('resend');
+    resend = new Resend(process.env.RESEND_API_KEY);
+  }
+  return resend;
+}
 
 export async function POST(req: Request) {
   const body = await req.json();
@@ -161,9 +167,10 @@ ${recordingUrl ? `【録音】\n${recordingUrl}` : ''}
   try {
     // メール送信（複数宛先）
     const recipients = ['yuna@metisbel.com', 'kousuke@metisbel.com'];
+    const emailClient = getResend();
 
     for (const email of recipients) {
-      await resend.emails.send({
+      await emailClient.emails.send({
         from: 'Heartful Support <noreply@metisbel.com>',
         to: email,
         subject: `【新規案件】${customerName}様 - ${troubleType} (${address})`,
