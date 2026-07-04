@@ -205,10 +205,12 @@ ${recordingUrl ? `【録音】\n${recordingUrl}` : ''}
     console.log(`✅ webhook 処理完了`);
     return new Response('OK', { status: 200 });
   } catch (error) {
+    console.error('❌ メール送信エラー:', error);
+    return new Response('メール送信エラー', { status: 500 });
+  }
+  } catch (error) {
     console.error('❌ webhook 処理エラー:', error);
     return new Response(JSON.stringify({ error: String(error) }), { status: 500 });
-  } finally {
-    console.log('📞 Webhook request completed');
   }
 }
 
