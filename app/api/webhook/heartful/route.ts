@@ -9,15 +9,23 @@ function getResend() {
 }
 
 export async function POST(req: Request) {
-  const body = await req.json();
-  const event = body.event;
+  try {
+    const body = await req.json();
+    const event = body.event;
 
-  if (event !== 'call_analyzed') {
-    return new Response('OK', { status: 200 });
-  }
+    console.log('🔔 Webhook received:', event);
 
-  const data = body.data || {};
-  const analysis = data.post_call_analysis || {};
+    if (event !== 'call_analyzed') {
+      console.log('⏭️ Non-analyzed event, skipping');
+      return new Response('OK', { status: 200 });
+    }
+
+    console.log('✅ call_analyzed event detected');
+
+    const data = body.data || {};
+    const analysis = data.post_call_analysis || {};
+
+    console.log('📊 Call data:', JSON.stringify(data).slice(0, 200));
 
   // post_call_analysis_data から情報を抽出
   const customerName = analysis.customer_name || '不明';
@@ -165,25 +173,42 @@ ${recordingUrl ? `【録音】\n${recordingUrl}` : ''}
   `;
 
   try {
+    // Resend API キー確認
+    if (!process.env.RESEND_API_KEY) {
+      console.error('❌ RESEND_API_KEY が設定されていません');
+      return new Response('RESEND_API_KEY not configured', { status: 500 });
+    }
+
+    console.log('🔑 RESEND_API_KEY is configured');
+
     // メール送信（複数宛先）
     const recipients = ['yuna@metisbel.com', 'kousuke@metisbel.com'];
     const emailClient = getResend();
 
+    console.log(`📧 Sending emails to: ${recipients.join(', ')}`);
+
     for (const email of recipients) {
-      await emailClient.emails.send({
-        from: 'Heartful Support <noreply@metisbel.com>',
-        to: email,
-        subject: `【新規案件】${customerName}様 - ${troubleType} (${address})`,
-        html: emailHtml,
-        text: emailText,
-      });
+      try {
+        const result = await emailClient.emails.send({
+          from: 'Heartful Support <noreply@metisbel.com>',
+          to: email,
+          subject: `【新規案件】${customerName}様 - ${troubleType} (${address})`,
+          html: emailHtml,
+          text: emailText,
+        });
+        console.log(`✅ メール送信成功 (${email}):`, result);
+      } catch (emailError) {
+        console.error(`❌ メール送信失敗 (${email}):`, emailError);
+      }
     }
 
-    console.log(`✅ メール通知送信完了: ${recipients.join(', ')}`);
+    console.log(`✅ webhook 処理完了`);
     return new Response('OK', { status: 200 });
   } catch (error) {
-    console.error('❌ メール送信エラー:', error);
-    return new Response('メール送信エラー', { status: 500 });
+    console.error('❌ webhook 処理エラー:', error);
+    return new Response(JSON.stringify({ error: String(error) }), { status: 500 });
+  } finally {
+    console.log('📞 Webhook request completed');
   }
 }
 
