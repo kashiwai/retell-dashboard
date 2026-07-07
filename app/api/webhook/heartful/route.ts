@@ -190,7 +190,7 @@ ${recordingUrl ? `【録音】\n${recordingUrl}` : ''}
     for (const email of recipients) {
       try {
         const result = await emailClient.emails.send({
-          from: 'Heartful Support <noreply@metisbel.com>',
+          from: 'ハートフルコーポレーション受付 <noreply@autosales-ai.com>',
           to: email,
           subject: `【新規案件】${customerName}様 - ${troubleType} (${address})`,
           html: emailHtml,
