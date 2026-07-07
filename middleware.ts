@@ -7,6 +7,7 @@ const PUBLIC_PATHS = [
   '/api/auth/logout',
   '/api/auth/dev-login',
   '/api/webhook/retell',
+  '/api/webhook/heartful', // ハートフルコーポレーション着信のメール通知webhook(Retellから呼ばれる)
   '/api/line/webhook',
   '/api/notify/line',
   '/api/twiml/',
