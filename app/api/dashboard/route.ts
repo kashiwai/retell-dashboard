@@ -26,7 +26,7 @@ export async function GET() {
     tomorrow.setDate(tomorrow.getDate() + 1);
 
     // Get call list from Retell
-    const calls = await retellClient.call.list({ limit: 100 });
+    const calls = ((await retellClient.call.list({ limit: 100 }) as any).items ?? []) as any[];
     
     // Filter today's calls
     const todayCalls = calls.filter(call => {

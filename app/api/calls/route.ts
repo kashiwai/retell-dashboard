@@ -26,7 +26,7 @@ export async function GET(request: NextRequest) {
     const searchParams = request.nextUrl.searchParams;
     const limit = parseInt(searchParams.get('limit') || '10');
     
-    const calls = await retellClient.call.list({ limit: 100 }) as any[];
+    const calls = ((await retellClient.call.list({ limit: 100 }) as any).items ?? []) as any[];
 
     // Limit to the requested number
     const limitedCalls = calls.slice(0, limit);

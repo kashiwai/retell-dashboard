@@ -22,15 +22,15 @@ export async function PATCH(
 
     const retellClient = getRetellClient();
     const updated = await retellClient.phoneNumber.update(phone, {
-      inbound_agent_id: inbound_agent_id ?? undefined,
-      outbound_agent_id: outbound_agent_id ?? undefined,
+      inbound_agents: inbound_agent_id ? [{ agent_id: inbound_agent_id, weight: 1 }] : undefined,
+      outbound_agents: outbound_agent_id ? [{ agent_id: outbound_agent_id, weight: 1 }] : undefined,
       nickname: nickname ?? undefined,
     });
 
     return NextResponse.json({
       success: true,
       phone_number: (updated as any).phone_number,
-      inbound_agent_id: (updated as any).inbound_agent_id,
+      inbound_agents: (updated as any).inbound_agents,
       nickname: (updated as any).nickname,
     });
   } catch (error: any) {

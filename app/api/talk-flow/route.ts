@@ -18,7 +18,7 @@ export async function GET() {
     });
 
     // Get all Retell LLMs
-    const llms = await retellClient.llm.list() as any[];
+    const llms = ((await retellClient.llm.list() as any).items ?? []) as any[];
     
     // Format for Japanese UI
     const formattedLLMs = llms.map((llm: any) => ({

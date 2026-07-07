@@ -216,7 +216,7 @@ async function createAgent(body: any) {
   if (phone_number) {
     try {
       await retellClient.phoneNumber.update(phone_number, {
-        inbound_agent_id: agent.agent_id,
+        inbound_agents: [{ agent_id: agent.agent_id, weight: 1 }],
         nickname: `${script.agent_name} (${company_name || 'TSUNAGARI-AI'})`,
       });
       phoneAssignment = { phone_number, assigned: true };

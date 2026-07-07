@@ -22,7 +22,7 @@ export async function GET() {
     const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
     
     // Get all calls
-    const calls = await retellClient.call.list({ limit: 1000 });
+    const calls = ((await retellClient.call.list({ limit: 1000 }) as any).items ?? []) as any[];
     
     // Process daily statistics
     const dailyStats = new Map<string, { calls: number; minutes: number }>();

@@ -45,7 +45,7 @@ export async function importPhoneNumberToRetell(
   const retell = getClient()
   await retell.phoneNumber.import({
     phone_number: phoneNumber,
-    inbound_agent_id: agentId,
+    inbound_agents: [{ agent_id: agentId, weight: 1 }],
     termination_uri: terminationUri,
   })
 }

@@ -30,8 +30,8 @@ export async function GET() {
     ]);
 
     // Retell に登録済みの番号セット
-    const retellRegistered = new Map(
-      retellNumbers.map((n: any) => [n.phone_number, n])
+    const retellRegistered = new Map<string, any>(
+      ((retellNumbers as any).items ?? []).map((n: any) => [n.phone_number, n] as [string, any])
     );
 
     // SIP Trunk を取得
@@ -47,8 +47,8 @@ export async function GET() {
         status: 'active',
         retell_registered: !!retellInfo,
         retell_phone_id: retellInfo?.phone_number_id ?? null,
-        inbound_agent_id: retellInfo?.inbound_agent_id ?? null,
-        outbound_agent_id: retellInfo?.outbound_agent_id ?? null,
+        inbound_agent_id: retellInfo?.inbound_agents?.[0]?.agent_id ?? retellInfo?.inbound_agent_id ?? null,
+        outbound_agent_id: retellInfo?.outbound_agents?.[0]?.agent_id ?? retellInfo?.outbound_agent_id ?? null,
         nickname: retellInfo?.nickname ?? null,
         sip_trunk_sid: trunk?.sid ?? null,
         created_at: n.dateCreated?.toISOString() ?? null,
@@ -154,19 +154,19 @@ export async function POST(req: NextRequest) {
 
       // Retell AI にインポート
       const retellNums = await retellClient.phoneNumber.list();
-      const alreadyImported = (retellNums as any[]).find(n => n.phone_number === phone_number);
+      const alreadyImported = ((retellNums as any).items ?? []).find((n: any) => n.phone_number === phone_number);
 
       let result;
       if (alreadyImported) {
         result = await retellClient.phoneNumber.update(phone_number, {
-          inbound_agent_id: agent_id || undefined,
+          inbound_agents: agent_id ? [{ agent_id, weight: 1 }] : undefined,
           nickname: nickname || undefined,
         });
       } else {
         result = await retellClient.phoneNumber.import({
           phone_number,
           termination_uri: terminationUri,
-          inbound_agent_id: agent_id || undefined,
+          inbound_agents: agent_id ? [{ agent_id, weight: 1 }] : undefined,
           nickname: nickname || `TSUNAGARI-AI ${phone_number}`,
         });
       }
@@ -175,7 +175,7 @@ export async function POST(req: NextRequest) {
         success: true,
         phone_number: (result as any).phone_number,
         retell_phone_id: (result as any).phone_number_id,
-        inbound_agent_id: (result as any).inbound_agent_id,
+        inbound_agents: (result as any).inbound_agents,
         message: 'Retell AI へのインポートが完了しました',
       });
     }

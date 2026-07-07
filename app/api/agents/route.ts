@@ -18,13 +18,13 @@ export async function GET() {
     });
 
     // Get agents list
-    const agents = await retellClient.agent.list() as any[];
+    const agents = ((await retellClient.agent.list() as any).items ?? []) as any[];
     
     // Get today's calls for each agent
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     
-    const calls = await retellClient.call.list({ limit: 500 }) as any[];
+    const calls = ((await retellClient.call.list({ limit: 500 }) as any).items ?? []) as any[];
     
     // Count calls per agent
     const agentCallCounts = new Map<string, number>();

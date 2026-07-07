@@ -19,7 +19,7 @@ export async function GET() {
     });
 
     // Get phone numbers from Retell
-    const phoneNumbers = await retellClient.phoneNumber.list();
+    const phoneNumbers = ((await retellClient.phoneNumber.list() as any).items ?? []) as any[];
     
     // Get tenant phone mapping
     const tenantMapping = getPhoneTenantMapping();
