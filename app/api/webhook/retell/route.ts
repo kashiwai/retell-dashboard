@@ -574,6 +574,7 @@ function formatAnalyzedMessageRich(call: any): any {
   if (custom.category) rows.push(kv('🗂 カテゴリ', custom.category));
   if (custom.urgency) rows.push(kv('⚡ 緊急度', custom.urgency));
   if (custom.fault_code) rows.push(kv('🛠 故障コード', custom.fault_code));
+  if (custom.customer_verbatim) rows.push(kv('🗣 お客様の言葉', custom.customer_verbatim));
 
   return {
     type: 'flex',
@@ -678,6 +679,7 @@ function formatGoogleChatCard(
   push('対象サービス', custom.service);
   push('⚡ 緊急度', custom.urgency);
   push('🛠 故障コード', custom.fault_code);
+  push('🗣 お客様の言葉', custom.customer_verbatim);
   push('通話時間', durationText);
   if (categoryRoute?.callbackNote) push('担当', categoryRoute.callbackNote);
 
