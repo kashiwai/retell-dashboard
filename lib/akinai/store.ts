@@ -35,10 +35,19 @@ export async function logEvidence(input: EvidenceInput): Promise<number | null> 
 
 export async function upsertSession(call_id: string, fields: Record<string, unknown>) {
   const sb = createAdminClient();
-  const { error } = await sb
-    .from('akinai_sessions')
-    .upsert({ call_id, scenario_version: SCENARIO_VERSION, updated_at: new Date().toISOString(), ...fields }, { onConflict: 'call_id' });
-  if (error) console.error('[akinai] session upsert failed:', error.message);
+  const base = { scenario_version: SCENARIO_VERSION, updated_at: new Date().toISOString(), ...fields };
+  // channel は NOT NULL のため upsert(INSERT経由)は使えない。update→無ければinsert。
+  const { data, error } = await sb.from('akinai_sessions').update(base).eq('call_id', call_id).select('call_id');
+  if (error) {
+    console.error('[akinai] session update failed:', error.message);
+    return;
+  }
+  if (!data || data.length === 0) {
+    const { error: insErr } = await sb
+      .from('akinai_sessions')
+      .insert({ call_id, channel: (fields.channel as string) ?? 'voice', ...base });
+    if (insErr) console.error('[akinai] session insert failed:', insErr.message);
+  }
 }
 
 export async function getSession(call_id: string) {
