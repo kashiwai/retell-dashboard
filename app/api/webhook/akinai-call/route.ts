@@ -169,18 +169,32 @@ export async function POST(request: NextRequest) {
 
   if (needsFollowup && phone) {
     try {
-      const { url } = await issueMagicLink({
+      const { token, url } = await issueMagicLink({
         call_id: callId,
         customer_name: dyn.customer_name || null,
         customer_phone: phone,
         policy_expiry_date: dyn.policy_expiry_date || null,
       });
-      const sent = await sendAkinaiSms(phone, url, dyn.customer_name || null);
+      // F1-a: 架電→不在→SMS。特定電子メール法対応(サプレッション照合・オプトアウト導線)込み
+      const result = await sendAkinaiSms(phone, url, dyn.customer_name || null, 'F1-a', token);
       await logEvidence({
         call_id: callId, channel: 'voice', node_id: 'F1',
-        payload: { sms_sent: sent, sms_to: phone },
+        payload: {
+          sms_mode: 'F1-a',
+          sms_sent: result.ok,
+          sms_to: phone,
+          delivery_status: result.status ?? result.reason ?? null,
+          opt_out_shown: true,
+          suppression_checked: true,
+        },
       });
-      await upsertSession(callId, { sms_sent_at: sent ? new Date().toISOString() : null });
+      await upsertSession(callId, {
+        sms_mode: 'F1-a',
+        sms_sent_at: result.ok ? new Date().toISOString() : null,
+        sms_delivery_status: result.status ?? result.reason ?? null,
+        opt_out_shown: true,
+        suppression_checked: true,
+      });
     } catch (e) {
       console.error('[akinai] F1 followup failed:', e);
     }

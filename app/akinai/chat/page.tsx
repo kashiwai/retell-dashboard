@@ -16,13 +16,15 @@ import {
 } from '@/lib/akinai/scenario';
 
 type Msg = { role: 'bot' | 'user'; text: string };
-type Stage = 'loading' | 'error' | 'S3' | 'S4' | 'S5' | 'S6' | 'done';
+type Stage = 'loading' | 'error' | 'S3' | 'S4' | 'S5' | 'S6' | 'done' | 'escalated';
 
 function ChatInner() {
   const params = useSearchParams();
   const token = params.get('token') || '';
   const [stage, setStage] = useState<Stage>('loading');
   const [errorMsg, setErrorMsg] = useState('');
+  const [canResend, setCanResend] = useState(false); // CB2: 失効・使用済み時の再送依頼導線
+  const [resendState, setResendState] = useState<'idle' | 'busy' | 'done'>('idle');
   const [msgs, setMsgs] = useState<Msg[]>([]);
   const [branch, setBranch] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -50,12 +52,14 @@ function ChatInner() {
         body: JSON.stringify({ token }),
       });
       if (!res.ok) {
+        // CB2: 失効・使用済みは契約情報を一切表示せず、再送依頼のみ受け付ける
         const map: Record<number, string> = {
           404: 'リンクが正しくありません。',
-          410: 'このリンクは有効期限切れ、または使用済みです。恐れ入りますが、お電話にてお問い合わせください。',
+          410: 'このリンクは有効期限切れ、または使用済みです。新しいご案内の再送をご希望の場合は、下のボタンからご依頼ください。',
         };
         setStage('error');
         setErrorMsg(map[res.status] || 'エラーが発生しました。時間をおいて再度お試しください。');
+        setCanResend(res.status === 410);
         return;
       }
       const j = await res.json();
@@ -121,7 +125,31 @@ function ChatInner() {
     setBusy(false);
   };
 
+  // CB2: 再送依頼(契約情報は一切返さない。担当者へ通知して人が再送する)
+  const requestResend = async () => {
+    if (resendState !== 'idle') return;
+    setResendState('busy');
+    await fetch('/api/akinai/resend', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token }),
+    });
+    setResendState('done');
+  };
+
+  // CB-ESC: 担当者に相談(全画面常設)→折り返しキューへ登録してチャット終了
+  const escalateToHuman = async () => {
+    if (busy || stage === 'escalated' || stage === 'done') return;
+    setBusy(true);
+    addUser('担当者に相談したい');
+    await record('CB-ESC');
+    addBot('かしこまりました。担当者より折り返しご連絡いたしますので、しばらくお待ちください。本日はありがとうございました。');
+    setStage('escalated');
+    setBusy(false);
+  };
+
   const optionsFor: Record<string, ScenarioOption[]> = { S3: S3_OPTIONS, S4: S4_OPTIONS, S5: S5_OPTIONS };
+  const inFlow = stage === 'S3' || stage === 'S4' || stage === 'S5' || stage === 'S6';
 
   return (
     <div className="min-h-screen bg-gray-100 flex flex-col items-center py-6 px-3">
@@ -133,7 +161,18 @@ function ChatInner() {
 
         <div className="flex-1 p-4 space-y-3 overflow-y-auto" style={{ minHeight: 360 }}>
           {stage === 'error' ? (
-            <p className="text-red-600 text-sm">{errorMsg}</p>
+            <div className="space-y-3">
+              <p className="text-red-600 text-sm">{errorMsg}</p>
+              {canResend && (
+                <button
+                  onClick={requestResend}
+                  disabled={resendState !== 'idle'}
+                  className="w-full border border-indigo-300 hover:bg-indigo-50 disabled:opacity-50 rounded-xl px-4 py-3 text-sm text-indigo-900"
+                >
+                  {resendState === 'done' ? '再送依頼を受け付けました。担当者よりご案内します。' : 'ご案内の再送を依頼する'}
+                </button>
+              )}
+            </div>
           ) : (
             msgs.map((m, i) => (
               <div key={i} className={m.role === 'bot' ? 'flex' : 'flex justify-end'}>
@@ -188,6 +227,23 @@ function ChatInner() {
             <p className="text-center text-sm text-gray-600">
               ご回答ありがとうございました。このページは閉じていただけます。
             </p>
+          )}
+
+          {stage === 'escalated' && (
+            <p className="text-center text-sm text-gray-600">
+              担当者より折り返しご連絡いたします。このページは閉じていただけます。
+            </p>
+          )}
+
+          {/* CB-ESC: 全画面に常設(顧客本位の業務運営原則) */}
+          {inFlow && (
+            <button
+              onClick={escalateToHuman}
+              disabled={busy}
+              className="w-full text-center text-xs text-gray-500 underline underline-offset-2 pt-1"
+            >
+              AIではなく担当者に相談する
+            </button>
           )}
         </div>
       </div>

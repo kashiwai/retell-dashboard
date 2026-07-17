@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/admin';
-import { logEvidence, upsertSession, getSession, finalizeSession, sendPostConfirmMail } from '@/lib/akinai/store';
+import { logEvidence, upsertSession, getSession, finalizeSession, sendPostConfirmMail, notifyStaff } from '@/lib/akinai/store';
 import { S3_OPTIONS, S4_OPTIONS, S5_OPTIONS } from '@/lib/akinai/scenario';
 
 export const dynamic = 'force-dynamic';
@@ -48,6 +48,27 @@ export async function POST(request: NextRequest) {
     branch_selected: selection ?? null,
     utterance_text: utterance_text ?? selectedLabel,
   });
+
+  // CB-ESC【v0.4】: 担当者に相談(全画面常設)。折り返しキューへ登録しチャット終了
+  if (node_id === 'CB-ESC') {
+    const now = new Date().toISOString();
+    await upsertSession(chatCallId, {
+      escalated: true,
+      escalation_reason: 'customer_request',
+      escalated_at: now,
+    });
+    await finalizeSession(chatCallId);
+    await notifyStaff(
+      '【AKINAI】担当者相談の依頼（CB-ESC・折り返しキュー）',
+      `<p>チャットのお客様が担当者との相談を希望しています。折り返しをお願いします。</p>
+       <ul>
+         <li>お名前: ${link.customer_name || '（不明）'}</li>
+         <li>電話番号: ${link.customer_phone || '（不明）'}</li>
+         <li>セッション: ${chatCallId}</li>
+       </ul>`
+    );
+    return NextResponse.json({ ok: true, append_only_seq: seq, escalated: true });
+  }
 
   // セッション集約フィールドの更新
   if (node_id === 'S3') await upsertSession(chatCallId, { branch_selected: selection });

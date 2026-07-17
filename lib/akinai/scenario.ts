@@ -4,9 +4,12 @@
 // 入口は3つ(OB/IB/CB)、意向把握コア(S3〜S7)は1つ(定義書 原則5)。
 // 事故のご連絡はAIが扱わない。即時に人へ引き継ぐ(原則7)。
 
-export const SCENARIO_VERSION = 'v0.2';
+export const SCENARIO_VERSION = 'v0.4';
 
 export type EntryPoint = 'OB' | 'IB' | 'CB';
+
+// SMS 3モード(v0.4): F1-a=架電→不在→SMS / F1-b=SMS予告→架電 / F1-c=SMSのみ(架電しない)
+export type SmsMode = 'F1-a' | 'F1-b' | 'F1-c';
 
 export interface ScenarioOption {
   key: string;

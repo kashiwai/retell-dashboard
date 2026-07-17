@@ -82,15 +82,52 @@ export async function issueMagicLink(params: {
   return { token, url: `${BASE_URL}/akinai/chat?token=${token}` };
 }
 
-export async function sendAkinaiSms(to: string, url: string, customerName?: string | null): Promise<boolean> {
+// サプレッションリスト照合(特定電子メール法: 受信拒否者への再送信禁止)
+export async function isSuppressed(phone: string): Promise<boolean> {
+  const sb = createAdminClient();
+  const { data } = await sb.from('akinai_suppression').select('phone').eq('phone', phone).maybeSingle();
+  return !!data;
+}
+
+export async function addSuppression(phone: string, source: string) {
+  const sb = createAdminClient();
+  await sb.from('akinai_suppression').upsert({ phone, source, requested_at: new Date().toISOString() });
+}
+
+export type SmsSendResult = { ok: boolean; status?: string; reason?: string };
+
+// SMS送信(v0.4: 特定電子メール法対応)
+// - 送信者の表示: 本文冒頭に事業者名を明記
+// - オプトアウト導線: 配信停止URLを必ず記載(opt_out_shown)
+// - 送信前にサプレッションリストを必ず照合(照合なしの送信は禁止)
+export async function sendAkinaiSms(
+  to: string,
+  url: string,
+  customerName?: string | null,
+  mode: 'F1-a' | 'F1-b' | 'F1-c' = 'F1-a',
+  optOutToken?: string
+): Promise<SmsSendResult> {
+  if (await isSuppressed(to)) {
+    console.log('[akinai] SMS blocked by suppression list:', to);
+    return { ok: false, reason: 'suppressed' };
+  }
   const sid = process.env.TWILIO_ACCOUNT_SID;
   const authToken = process.env.TWILIO_AUTH_TOKEN;
   const ms = process.env.TWILIO_MESSAGING_SERVICE_SID;
   if (!sid || !authToken || !ms) {
     console.error('[akinai] Twilio not configured');
-    return false;
+    return { ok: false, reason: 'not_configured' };
   }
-  const body = `【AKINAI】${customerName ? customerName + '様 ' : ''}自動車保険の満期更新のご案内です。以下のリンクからお手続きの意向をお聞かせください(7日間有効)。\n${url}`;
+
+  const optOutUrl = optOutToken ? `${BASE_URL}/akinai/optout?t=${optOutToken}` : `${BASE_URL}/akinai/optout`;
+  const namePart = customerName ? customerName + '様 ' : '';
+  const lead =
+    mode === 'F1-b'
+      ? `${namePart}自動車保険の満期更新について、後ほど担当よりお電話いたします。お電話の前にご確認いただける場合は以下のリンクをご利用ください(7日間有効)。`
+      : `${namePart}自動車保険の満期更新のご案内です。以下のリンクからお手続きの意向をお聞かせください(7日間有効)。`;
+  // 送信者の表示 + オプトアウト導線(特定電子メール法)
+  const body = `【AKINAI／Data Agent AI株式会社】\n${lead}\n${url}\n\n配信停止をご希望の方: ${optOutUrl}`;
+
   const params = new URLSearchParams();
   params.set('MessagingServiceSid', ms);
   params.set('To', to);
@@ -106,9 +143,20 @@ export async function sendAkinaiSms(to: string, url: string, customerName?: stri
   const j = await res.json();
   if (!res.ok || j.error_code) {
     console.error('[akinai] SMS failed:', j.message || res.status);
-    return false;
+    return { ok: false, reason: j.message || `HTTP ${res.status}` };
   }
-  return true;
+  return { ok: true, status: j.status };
+}
+
+// 運用連絡メール(再送依頼・折り返しキュー登録などを担当者へ通知)
+export async function notifyStaff(subject: string, html: string) {
+  const apiKey = process.env.RESEND_API_KEY;
+  if (!apiKey) return;
+  await fetch('https://api.resend.com/emails', {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ from: MAIL_FROM, to: MAIL_TO, subject, html: `<div style="font-family:sans-serif">${html}</div>` }),
+  }).catch((e) => console.error('[akinai] staff notify failed:', e));
 }
 
 // 後確メール(R1: 確認メール / R2: 面談ご案内メール)
