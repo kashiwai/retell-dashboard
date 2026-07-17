@@ -1,9 +1,12 @@
-// AKINAI CallCenter ロ方式シナリオ定義 v0.1
-// 出典: AKINAI_CallCenter_ロ方式シナリオ定義書_v0.1.md
+// AKINAI CallCenter ロ方式シナリオ定義 v0.2
+// 出典: AKINAI_CallCenter_ロ方式シナリオ定義書_v0.2.md
 // 原則: 発話は事前定義済みのみ。生成AIによる自由発話を用いない。
-// 電話(Retell)とチャットは本定義を共有する(定義書 原則5)。
+// 入口は3つ(OB/IB/CB)、意向把握コア(S3〜S7)は1つ(定義書 原則5)。
+// 事故のご連絡はAIが扱わない。即時に人へ引き継ぐ(原則7)。
 
-export const SCENARIO_VERSION = 'v0.1';
+export const SCENARIO_VERSION = 'v0.2';
+
+export type EntryPoint = 'OB' | 'IB' | 'CB';
 
 export interface ScenarioOption {
   key: string;
@@ -29,6 +32,14 @@ export const S5_OPTIONS: ScenarioOption[] = [
   { key: 'review', label: '補償内容の見直し相談' },
   { key: 'compare', label: '他社保険との比較確認' },
   { key: 'skip', label: '不要（スキップ）' },
+];
+
+// IB4 用件分岐【4択・インバウンド】③事故は即時・最優先で人へ
+export const IB4_OPTIONS: ScenarioOption[] = [
+  { key: 'renewal', label: '更新のご相談' },
+  { key: 'appointment', label: '来店予約の変更・確認' },
+  { key: 'accident', label: '事故のご連絡' },
+  { key: 'other', label: 'その他' },
 ];
 
 // 事前定義発話(チャット表示・電話読み上げ共通の原文)

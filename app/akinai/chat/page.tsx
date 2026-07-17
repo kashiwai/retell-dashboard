@@ -60,6 +60,8 @@ function ChatInner() {
       }
       const j = await res.json();
       addBot(UTTERANCES.C1_INTRO(j.customer_name || ''));
+      // CB1: 冒頭に記録保存の旨を表示(定義書v0.2 5章)
+      addBot('ご回答いただいた内容は、保険業法に基づく意向把握の記録として保存されます。');
       addBot(UTTERANCES.S3);
       setStage('S3');
     })();

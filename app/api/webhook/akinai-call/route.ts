@@ -59,15 +59,38 @@ export async function POST(request: NextRequest) {
   const lifeChange = toBool(custom.life_change_flag);
   const optionSkipped = toBool(custom.option_skipped);
 
+  // v0.2: 入口判定(発信=OB / 着信=IB)・認証・用件・エスカレーション
+  const direction: 'inbound' | 'outbound' = call?.direction === 'inbound' ? 'inbound' : 'outbound';
+  const entryPoint = direction === 'inbound' ? 'IB' : 'OB';
+  const authResult = ['success', 'failed'].includes(custom.auth_result) ? custom.auth_result : null;
+  const inboundIntent = ['renewal', 'appointment', 'accident', 'other'].includes(custom.inbound_intent)
+    ? custom.inbound_intent
+    : null;
+  const escalated = toBool(custom.escalated) === true;
+  const escalationReason = ['accident', 'auth_failed', 'other', 'customer_request'].includes(custom.escalation_reason)
+    ? custom.escalation_reason
+    : null;
+
   await upsertSession(callId, {
     channel: 'voice',
+    entry_point: entryPoint,
+    direction,
     customer_name: dyn.customer_name || custom.customer_name || null,
     customer_phone: phone || null,
     policy_expiry_date: dyn.policy_expiry_date || null,
     started_at: startedAt,
     ended_at: endedAt,
-    consent_recording_at: startedAt, // S2で録音明示(通話冒頭)
+    consent_recording_at: startedAt, // OB2/IB1で録音明示(通話冒頭)
     identity_verified: identityVerified,
+    auth_method: direction === 'inbound' ? 'caller_id+knowledge' : 'outbound_callee',
+    auth_result: authResult ?? (identityVerified === null ? null : identityVerified ? 'success' : 'failed'),
+    auth_attempts: Number.isFinite(Number(custom.auth_attempts)) ? Number(custom.auth_attempts) : null,
+    inbound_intent: inboundIntent,
+    escalated,
+    escalation_reason: escalationReason,
+    escalated_at: escalated ? endedAt : null,
+    transfer_result: custom.transfer_result || null,
+    appointment_changed_to: custom.appointment_changed_to || null,
     branch_selected: branch,
     life_change_flag: lifeChange,
     option_selected: custom.option_selected || null,
@@ -80,7 +103,30 @@ export async function POST(request: NextRequest) {
   // ノード証跡(通話後分析からの復元)
   const nodes: Array<Parameters<typeof logEvidence>[0]> = [];
   if (identityVerified !== null) {
-    nodes.push({ call_id: callId, channel: 'voice', node_id: 'S1', branch_selected: identityVerified ? 'yes' : 'no' });
+    nodes.push({
+      call_id: callId,
+      channel: 'voice',
+      node_id: direction === 'inbound' ? 'IB3' : 'OB1',
+      branch_selected: identityVerified ? 'yes' : 'no',
+      payload: { auth_attempts: custom.auth_attempts ?? null },
+    });
+  }
+  if (inboundIntent) {
+    nodes.push({
+      call_id: callId, channel: 'voice', node_id: 'IB4',
+      presented_options: ['renewal', 'appointment', 'accident', 'other'],
+      branch_selected: inboundIntent,
+    });
+  }
+  if (escalated) {
+    nodes.push({
+      call_id: callId, channel: 'voice',
+      node_id: escalationReason === 'accident' ? 'E-ACC' : 'H-ESC',
+      payload: { escalation_reason: escalationReason, transfer_result: custom.transfer_result ?? null },
+    });
+  }
+  if (custom.appointment_changed_to) {
+    nodes.push({ call_id: callId, channel: 'voice', node_id: 'IB5', utterance_text: custom.appointment_changed_to });
   }
   if (branch) {
     nodes.push({
@@ -114,8 +160,12 @@ export async function POST(request: NextRequest) {
   });
   for (const n of nodes) await logEvidence(n);
 
-  // F1判定: 本人不到達・拒否・意向未取得 → SMSフォロー(マジックリンク → C1チャット)
-  const needsFollowup = toBool(custom.followup_sms_needed) === true || (!branch && identityVerified !== true);
+  // F1判定: OB(発信)のみ。不在・拒否・意向未取得 → SMSフォロー(マジックリンク → CBチャット)
+  // IBの認証失敗・事故・その他は通話内で H-ESC / E-ACC(人へ)に抜けるため SMS は送らない。
+  const needsFollowup =
+    direction === 'outbound' &&
+    !escalated &&
+    (toBool(custom.followup_sms_needed) === true || (!branch && identityVerified !== true));
 
   if (needsFollowup && phone) {
     try {
@@ -138,11 +188,12 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ ok: true, route: 'F1' });
   }
 
-  // 証跡確定(ハッシュ・TSA) → 後確(R1/R2)
+  // 証跡確定(ハッシュ・TSA) → 後確(R1/R2)。後確は入口によらず同一(A→R1/B・C→R2)。
+  // エスカレーション済み(事故・人へ引き継ぎ)の場合は人が対応するため後確メールは送らない。
   await finalizeSession(callId);
   let postConfirm: 'R1' | 'R2' | null = null;
-  if (branch) {
+  if (branch && !escalated) {
     postConfirm = await sendPostConfirmMail(callId);
   }
-  return NextResponse.json({ ok: true, route: postConfirm ?? 'none' });
+  return NextResponse.json({ ok: true, route: postConfirm ?? (escalated ? 'escalated' : 'none') });
 }

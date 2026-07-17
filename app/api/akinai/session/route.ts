@@ -42,6 +42,10 @@ export async function POST(request: NextRequest) {
       customer_phone: link.customer_phone,
       policy_expiry_date: link.policy_expiry_date,
       channel: 'chat',
+      entry_point: 'CB',
+      auth_method: 'magic_link',
+      auth_result: 'success',
+      authenticated_at: now,
       started_at: now,
       link_tapped_at: now,
     });
