@@ -15,6 +15,9 @@ const PUBLIC_PATHS = [
   '/api/recording/', // LINE/Chat通知の「録音を再生」ボタン用(callIdは推測困難な長いランダム値)
   '/api/tools/', // Retell Custom Function(通話中の予約リンク送信など)用
   '/api/gcal/', // Retell Custom Function(音声予約: 空き取得・予約確定)用
+  '/api/webhook/akinai-call', // AKINAIロ方式 電話Agent webhook(Retellから呼ばれる)
+  '/akinai/chat', // AKINAI C1チャットボット(マジックリンクで認証)
+  '/api/akinai/', // AKINAI チャットAPI(トークンで認証)
 ]
 
 // 短縮ドメイン(001001.app)からのアクセスは予約リンクへリダイレクトする。
