@@ -16,7 +16,7 @@ const PUBLIC_PATHS = [
   '/api/tools/', // Retell Custom Function(通話中の予約リンク送信など)用
   '/api/gcal/', // Retell Custom Function(音声予約: 空き取得・予約確定)用
   '/api/webhook/akinai-call', // AKINAIロ方式 電話Agent webhook(Retellから呼ばれる)
-  '/akinai/chat', // AKINAI C1チャットボット(マジックリンクで認証)
+  '/akinai/', // AKINAI 顧客向けページ(チャット/配信停止/予約確認。トークンで認証)
   '/api/akinai/', // AKINAI チャットAPI(トークンで認証)
 ]
 

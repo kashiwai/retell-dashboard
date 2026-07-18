@@ -157,12 +157,24 @@ export async function sendAkinaiSms(
   return { ok: true, status: j.status };
 }
 
-// 予約確定の確認SMS(取引に関する通知=広告宣伝ではないため、オプトアウト導線は不要。
-// ただし受信拒否済みの番号には安全側に倒して送らない)
+// 予約確認ページ用トークン発行(閲覧専用・7日有効・使い切りにしない)
+export async function issueBookingToken(call_id: string): Promise<{ token: string; url: string }> {
+  const token = randomBytes(24).toString('base64url');
+  const expires_at = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
+  const sb = createAdminClient();
+  const { error } = await sb
+    .from('akinai_magic_links')
+    .insert({ token, call_id, expires_at, sms_mode: 'confirm' });
+  if (error) throw new Error('booking token insert failed: ' + error.message);
+  return { token, url: `${BASE_URL}/akinai/booking?t=${token}` };
+}
+
+// 予約確定の確認SMS(SMSは短文+URLのみ。詳細はWebの予約確認ページで表示)
+// 取引に関する通知=広告宣伝ではないためオプトアウト導線は不要。
+// ただし受信拒否済みの番号には安全側に倒して送らない。
 export async function sendAppointmentConfirmSms(
   to: string,
-  customerName: string | null,
-  appointmentText: string,
+  detailUrl: string,
   changed = false
 ): Promise<SmsSendResult> {
   if (await isSuppressed(to)) {
@@ -174,9 +186,8 @@ export async function sendAppointmentConfirmSms(
   const ms = process.env.TWILIO_MESSAGING_SERVICE_SID;
   if (!sid || !authToken || !ms) return { ok: false, reason: 'not_configured' };
 
-  const namePart = customerName ? customerName + '様\n' : '';
-  const lead = changed ? 'ご来店予約の変更を承りました。' : 'ご来店のご予約を承りました。';
-  const body = `【AKINAI／Data Agent AI株式会社】\n${namePart}お電話ありがとうございました。${lead}\n\n■ご予約日時: ${appointmentText}\n\n変更・キャンセルの際は 050-1725-0049 までお電話ください。当日お会いできることを楽しみにしております。`;
+  const lead = changed ? 'ご予約の変更を承りました。' : 'ご来店のご予約を承りました。';
+  const body = `【AKINAI】${lead}詳細はこちらでご確認ください(7日間有効)\n${detailUrl}`;
 
   const params = new URLSearchParams();
   params.set('MessagingServiceSid', ms);
