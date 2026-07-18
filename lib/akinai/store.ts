@@ -157,6 +157,47 @@ export async function sendAkinaiSms(
   return { ok: true, status: j.status };
 }
 
+// 予約確定の確認SMS(取引に関する通知=広告宣伝ではないため、オプトアウト導線は不要。
+// ただし受信拒否済みの番号には安全側に倒して送らない)
+export async function sendAppointmentConfirmSms(
+  to: string,
+  customerName: string | null,
+  appointmentText: string,
+  changed = false
+): Promise<SmsSendResult> {
+  if (await isSuppressed(to)) {
+    console.log('[akinai] confirm SMS skipped (suppressed):', to);
+    return { ok: false, reason: 'suppressed' };
+  }
+  const sid = process.env.TWILIO_ACCOUNT_SID;
+  const authToken = process.env.TWILIO_AUTH_TOKEN;
+  const ms = process.env.TWILIO_MESSAGING_SERVICE_SID;
+  if (!sid || !authToken || !ms) return { ok: false, reason: 'not_configured' };
+
+  const namePart = customerName ? customerName + '様\n' : '';
+  const lead = changed ? 'ご来店予約の変更を承りました。' : 'ご来店のご予約を承りました。';
+  const body = `【AKINAI／Data Agent AI株式会社】\n${namePart}お電話ありがとうございました。${lead}\n\n■ご予約日時: ${appointmentText}\n\n変更・キャンセルの際は 050-1725-0049 までお電話ください。当日お会いできることを楽しみにしております。`;
+
+  const params = new URLSearchParams();
+  params.set('MessagingServiceSid', ms);
+  params.set('To', to);
+  params.set('Body', body);
+  const res = await fetch(`https://api.twilio.com/2010-04-01/Accounts/${sid}/Messages.json`, {
+    method: 'POST',
+    headers: {
+      Authorization: 'Basic ' + Buffer.from(`${sid}:${authToken}`).toString('base64'),
+      'Content-Type': 'application/x-www-form-urlencoded',
+    },
+    body: params.toString(),
+  });
+  const j = await res.json();
+  if (!res.ok || j.error_code) {
+    console.error('[akinai] confirm SMS failed:', j.message || res.status);
+    return { ok: false, reason: j.message || `HTTP ${res.status}` };
+  }
+  return { ok: true, status: j.status };
+}
+
 // 運用連絡メール(再送依頼・折り返しキュー登録などを担当者へ通知)
 export async function notifyStaff(subject: string, html: string) {
   const apiKey = process.env.RESEND_API_KEY;

@@ -6,6 +6,7 @@ import {
   sendPostConfirmMail,
   issueMagicLink,
   sendAkinaiSms,
+  sendAppointmentConfirmSms,
 } from '@/lib/akinai/store';
 import { S3_OPTIONS, S4_OPTIONS, S5_OPTIONS } from '@/lib/akinai/scenario';
 
@@ -19,6 +20,11 @@ export const dynamic = 'force-dynamic';
 function customerNumber(call: any): string {
   if (call?.direction === 'inbound') return call?.from_number || '';
   return call?.to_number || call?.from_number || '';
+}
+
+function isJapaneseMobile(raw: string): boolean {
+  const n = (raw || '').replace(/[\s-]/g, '');
+  return /^\+81(70|80|90)/.test(n) || /^0(70|80|90)/.test(n);
 }
 
 function toBool(v: unknown): boolean | null {
@@ -200,6 +206,27 @@ export async function POST(request: NextRequest) {
     }
     await finalizeSession(callId);
     return NextResponse.json({ ok: true, route: 'F1' });
+  }
+
+  // 予約確定の確認SMS: 来店予約(S6)または予約変更(IB5)が確定した通話後に携帯へ自動送信
+  const appointmentText = custom.appointment_at || custom.appointment_changed_to;
+  if (appointmentText && !escalated && phone && isJapaneseMobile(phone)) {
+    const confirmResult = await sendAppointmentConfirmSms(
+      phone,
+      dyn.customer_name || custom.customer_name || null,
+      appointmentText,
+      !!custom.appointment_changed_to
+    );
+    await logEvidence({
+      call_id: callId, channel: 'voice', node_id: 'SMS-CONFIRM',
+      payload: {
+        sms_to: phone,
+        sms_sent: confirmResult.ok,
+        delivery_status: confirmResult.status ?? confirmResult.reason ?? null,
+        appointment_text: appointmentText,
+        changed: !!custom.appointment_changed_to,
+      },
+    });
   }
 
   // 証跡確定(ハッシュ・TSA) → 後確(R1/R2)。後確は入口によらず同一(A→R1/B・C→R2)。
