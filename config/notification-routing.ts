@@ -200,7 +200,8 @@ export const AGENT_NOTIFICATION_CONFIGS: Record<string, AgentNotificationConfig>
   agent_8418c6d3b174146f85069f6acb: { agentId: 'agent_8418c6d3b174146f85069f6acb', ...PALDATA_CONFIG },
   agent_a592216675b333a6df9df06bda: { agentId: 'agent_a592216675b333a6df9df06bda', ...PALDATA_CONFIG },
   agent_c07db9f5cce7217a98980b8cb2: { agentId: 'agent_c07db9f5cce7217a98980b8cb2', ...PALDATA_CONFIG },
-  agent_5acf71ebbeba6463acd0031b86: { agentId: 'agent_5acf71ebbeba6463acd0031b86', ...PALDATA_CONFIG }, // 現在の本番紐付け先(+815017941185、着信/発信両方)
+  agent_5acf71ebbeba6463acd0031b86: { agentId: 'agent_5acf71ebbeba6463acd0031b86', ...PALDATA_CONFIG },
+  agent_0a8b8fd1bb2f9a5452869ac0bd: { agentId: 'agent_0a8b8fd1bb2f9a5452869ac0bd', ...PALDATA_CONFIG }, // 現在の本番紐付け先(+815017941185、着信/発信両方)
 };
 
 /** agent_id からエージェント通知設定を取得(未登録なら null) */
