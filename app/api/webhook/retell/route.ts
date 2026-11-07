@@ -144,7 +144,7 @@ async function saveCallToDb(payload: unknown) {
       transcript: call.transcript as string ?? null,
       summary: analysis.call_summary as string ?? null,
       sentiment: analysis.user_sentiment as string ?? null,
-      fault_code: (analysis.custom_analysis as Record<string, unknown>)?.fault_code as string ?? null,
+      fault_code: (analysis.custom_analysis_data as Record<string, unknown>)?.fault_code as string ?? null,
       resolution_status: analysis.resolution_status as string ?? null,
       custom_analysis: analysis as Record<string, unknown>,
       recording_url: call.recording_url as string ?? null,
@@ -226,7 +226,7 @@ async function handleCallAnalyzed(payload: any) {
   console.log('Call data extracted:', {
     call_id: call.call_id,
     has_call_analysis: !!call.call_analysis,
-    has_custom_analysis: !!call.call_analysis?.custom_analysis,
+    has_custom_analysis: !!call.call_analysis?.custom_analysis_data,
     summary_preview: call.call_analysis?.summary?.substring(0, 100),
   });
   await dispatchNotifications(call, true);
@@ -241,7 +241,7 @@ async function handleCallAnalyzed(payload: any) {
 async function dispatchNotifications(call: any, isAnalysis: boolean) {
   try {
     const config = getAgentNotificationConfig(call?.agent_id);
-    const customAnalysis = call?.call_analysis?.custom_analysis || {};
+    const customAnalysis = call?.call_analysis?.custom_analysis_data || {};
     const urgency = customAnalysis.urgency;
 
     if (config && !shouldNotify(config, urgency)) {
@@ -330,7 +330,7 @@ function formatCallEndedMessage(call: any): string {
 
 function formatAnalyzedMessage(call: any): string {
   const analysis = call.call_analysis || {};
-  const customAnalysis = analysis.custom_analysis || {};
+  const customAnalysis = analysis.custom_analysis_data || {};
   
   const urgencyEmoji = {
     '高': '🔴',
@@ -544,7 +544,7 @@ function formatCallEndedMessageRich(call: any): any {
 
 function formatAnalyzedMessageRich(call: any): any {
   const analysis = call.call_analysis || {};
-  const custom = analysis.custom_analysis || {};
+  const custom = analysis.custom_analysis_data || {};
 
   // 必須項目(必ず表示・値が無ければプレースホルダ)
   const company = custom.company || '（確認できず）';
@@ -646,7 +646,7 @@ function formatGoogleChatCard(
   config: AgentNotificationConfig | null
 ): any {
   const analysis = call.call_analysis || {};
-  const custom = analysis.custom_analysis || {};
+  const custom = analysis.custom_analysis_data || {};
 
   const duration =
     call.end_timestamp && call.start_timestamp
@@ -659,7 +659,7 @@ function formatGoogleChatCard(
       ? config.categories.find((c) => c.key === custom.category)
       : undefined;
 
-  const dashboardUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'https://retell-dashboard-opal.vercel.app'}/dashboard/calls`;
+  const dashboardUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'https://www.callcenter-ai.me'}/dashboard/calls`;
 
   // ラベル付き項目(値があるものだけ表示)
   const rows: Array<{ label: string; value: string }> = [];
