@@ -194,7 +194,8 @@ export const AGENT_NOTIFICATION_CONFIGS: Record<string, AgentNotificationConfig>
   agent_d5b418d44d0e89be2169ae2141: { agentId: 'agent_d5b418d44d0e89be2169ae2141', ...MAGGIE_CONFIG },
   agent_a7787dc9a1b0abc961d272d998: { agentId: 'agent_a7787dc9a1b0abc961d272d998', ...MAGGIE_CONFIG },
   agent_667d3a6ddd29656d10e9a9f953: { agentId: 'agent_667d3a6ddd29656d10e9a9f953', ...MAGGIE_CONFIG },
-  agent_891711c9bf4f18bc7b09c83f25: { agentId: 'agent_891711c9bf4f18bc7b09c83f25', ...MAGGIE_CONFIG }, // 現在の本番紐付け先(+815017852040、フランク口調・敬称ルール版)
+  agent_891711c9bf4f18bc7b09c83f25: { agentId: 'agent_891711c9bf4f18bc7b09c83f25', ...MAGGIE_CONFIG },
+  agent_f8ad2c1099fb61655a3881396e: { agentId: 'agent_f8ad2c1099fb61655a3881396e', ...MAGGIE_CONFIG }, // 現在の本番紐付け先(+815017852040、人間らしさ重視版)
 
   // ---- PALDATA/パル端末サポート窓口 (GPT-Live-1版・2026-11 作成分) ----
   agent_d2f1fc90b52e455f11a52ae889: { agentId: 'agent_d2f1fc90b52e455f11a52ae889', ...PALDATA_CONFIG },
