@@ -196,7 +196,8 @@ export const AGENT_NOTIFICATION_CONFIGS: Record<string, AgentNotificationConfig>
   agent_667d3a6ddd29656d10e9a9f953: { agentId: 'agent_667d3a6ddd29656d10e9a9f953', ...MAGGIE_CONFIG },
   agent_891711c9bf4f18bc7b09c83f25: { agentId: 'agent_891711c9bf4f18bc7b09c83f25', ...MAGGIE_CONFIG },
   agent_f8ad2c1099fb61655a3881396e: { agentId: 'agent_f8ad2c1099fb61655a3881396e', ...MAGGIE_CONFIG },
-  agent_36f4dfdaff49f521d7f8f2f6e0: { agentId: 'agent_36f4dfdaff49f521d7f8f2f6e0', ...MAGGIE_CONFIG }, // 現在の本番紐付け先(+815017852040、開始フレーズ・取次ぎフロー修正版)
+  agent_36f4dfdaff49f521d7f8f2f6e0: { agentId: 'agent_36f4dfdaff49f521d7f8f2f6e0', ...MAGGIE_CONFIG },
+  agent_f17a03f42f0d032093b65595cd: { agentId: 'agent_f17a03f42f0d032093b65595cd', ...MAGGIE_CONFIG }, // 現在の本番紐付け先(+815017852040、折り返し電話番号収集版)
 
   // ---- PALDATA/パル端末サポート窓口 (GPT-Live-1版・2026-11 作成分) ----
   agent_d2f1fc90b52e455f11a52ae889: { agentId: 'agent_d2f1fc90b52e455f11a52ae889', ...PALDATA_CONFIG },
