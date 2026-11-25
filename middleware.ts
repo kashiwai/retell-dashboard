@@ -18,6 +18,12 @@ const PUBLIC_PATHS = [
   '/api/webhook/akinai-call', // AKINAIロ方式 電話Agent webhook(Retellから呼ばれる)
   '/akinai/', // AKINAI 顧客向けページ(チャット/配信停止/予約確認。トークンで認証)
   '/api/akinai/', // AKINAI チャットAPI(トークンで認証)
+  '/api/webhook/personal-secretary-inbound', // 個人受電代行 着信webhook(Retellから呼ばれる)
+  '/api/webhook/personal-secretary', // 個人受電代行 call_analyzed webhook(Retellから呼ばれる)
+  '/api/webhook/line-personal-secretary', // 個人受電代行 LINE Bot webhook(署名検証あり)
+  '/signup/personal-secretary', // 個人受電代行 セルフ登録フォーム
+  '/api/personal-secretary/', // 個人受電代行 登録API
+  '/api/webhook/fish-audio', // Fish Audio 通話イベントwebhook(Fish Audioから呼ばれる。署名検証あり)
 ]
 
 // 短縮ドメイン(001001.app)からのアクセスは予約リンクへリダイレクトする。

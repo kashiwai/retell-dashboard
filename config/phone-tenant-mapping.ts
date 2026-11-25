@@ -1,6 +1,10 @@
 // 電話番号ベースのテナント管理設定
 // 1つのRetell AIアカウントで複数のお客様を管理
 
+// 電話AIの接続先(電話会社・音声AI会社)。テナントごとに適材適所で選べるようにする。
+// 新しい接続先を追加する場合はここに値を足し、各接続先専用のWebhook(/api/webhook/<provider>)を用意する。
+export type VoiceProvider = 'retell' | 'vapi';
+
 export interface PhoneTenantConfig {
   tenantId: string;
   name: string;
@@ -9,6 +13,8 @@ export interface PhoneTenantConfig {
   secondaryColor?: string;
   logo?: string;
   lineUserId?: string;
+  /** このテナントがどの電話AI会社を使うか。未指定なら'retell'(既定)。 */
+  provider?: VoiceProvider;
   features: {
     lineNotification: boolean;
     gptAnalysis: boolean;
@@ -58,6 +64,7 @@ export function getPhoneTenantMapping(): Record<string, PhoneTenantConfig> {
         secondaryColor: item.secondaryColor,
         logo: item.logo,
         lineUserId: item.lineUserId,
+        provider: (item.provider as VoiceProvider) || 'retell',
         features: {
           lineNotification: item.features?.line !== false,
           gptAnalysis: item.features?.gpt !== false,
