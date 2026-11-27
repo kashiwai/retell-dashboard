@@ -3,13 +3,24 @@
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 
+interface ScriptTemplateSummary {
+  id: string
+  name: string
+  category: string
+  description: string
+  prompt: string
+}
+
 export default function ScriptPage() {
   const [prompt, setPrompt] = useState('')
   const [provider, setProvider] = useState<string | null>(null)
+  const [companyName, setCompanyName] = useState('')
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [savedAt, setSavedAt] = useState<string | null>(null)
+  const [templates, setTemplates] = useState<ScriptTemplateSummary[]>([])
+  const [showTemplates, setShowTemplates] = useState(false)
 
   useEffect(() => {
     fetch('/api/dashboard/script')
@@ -18,10 +29,24 @@ export default function ScriptPage() {
         if (!r.ok) throw new Error(d.error || '読み込みに失敗しました')
         setPrompt(d.prompt ?? '')
         setProvider(d.provider ?? null)
+        setCompanyName(d.companyName ?? '')
       })
       .catch((e) => setError(e.message))
       .finally(() => setLoading(false))
+
+    fetch('/api/dashboard/script-templates')
+      .then((r) => (r.ok ? r.json() : { templates: [] }))
+      .then((d) => setTemplates(d.templates ?? []))
+      .catch(() => {})
   }, [])
+
+  const applyTemplate = (t: ScriptTemplateSummary) => {
+    const filled = companyName
+      ? t.prompt.replaceAll('{{会社名}}', companyName)
+      : t.prompt
+    setPrompt(filled)
+    setShowTemplates(false)
+  }
 
   const handleSave = async () => {
     setSaving(true)
@@ -88,6 +113,45 @@ export default function ScriptPage() {
                   {error}
                 </div>
               )}
+
+              <div className="mb-4">
+                <button
+                  onClick={() => setShowTemplates((v) => !v)}
+                  className="px-4 py-2 rounded-xl text-sm font-semibold transition-all"
+                  style={{ background: 'rgba(1,201,253,0.12)', border: '1px solid rgba(1,201,253,0.3)', color: '#01C9FD' }}
+                >
+                  📋 テンプレートから選ぶ{showTemplates ? '（閉じる）' : ''}
+                </button>
+                <p className="text-xs mt-1.5" style={{ color: 'rgba(240,244,255,0.7)' }}>
+                  用途に合うテンプレートを選ぶと、会社名を自動で差し込んだ状態で下の欄に入ります。あとは必要な部分だけ直してください。
+                </p>
+
+                {showTemplates && (
+                  <div className="mt-3 grid grid-cols-1 gap-2">
+                    {templates.length === 0 ? (
+                      <p className="text-xs" style={{ color: 'rgba(240,244,255,0.6)' }}>テンプレートを読み込めませんでした</p>
+                    ) : (
+                      templates.map((t) => (
+                        <button
+                          key={t.id}
+                          onClick={() => applyTemplate(t)}
+                          className="text-left p-4 rounded-2xl transition-all hover:scale-[1.005]"
+                          style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)' }}
+                        >
+                          <div className="flex items-center gap-2 mb-1">
+                            <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold" style={{ background: 'rgba(1,201,253,0.15)', color: '#01C9FD' }}>
+                              {t.category}
+                            </span>
+                            <span className="font-bold text-sm text-white">{t.name}</span>
+                          </div>
+                          <p className="text-xs" style={{ color: 'rgba(240,244,255,0.8)' }}>{t.description}</p>
+                        </button>
+                      ))
+                    )}
+                  </div>
+                )}
+              </div>
+
               <textarea
                 value={prompt}
                 onChange={(e) => setPrompt(e.target.value)}

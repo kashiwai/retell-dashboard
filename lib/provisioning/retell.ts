@@ -50,6 +50,17 @@ export async function importPhoneNumberToRetell(
   })
 }
 
+/** 電話番号に着信webhook(call_inbound)を設定。着信ごとにdynamic_variables等を動的に注入するために使う */
+export async function setInboundWebhook(
+  phoneNumber: string,
+  webhookUrl: string
+): Promise<void> {
+  const retell = getClient()
+  await retell.phoneNumber.update(phoneNumber, {
+    inbound_webhook_url: webhookUrl,
+  })
+}
+
 /** プロンプトを更新 */
 export async function updateAgentPrompt(
   llmId: string,

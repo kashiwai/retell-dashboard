@@ -9,6 +9,9 @@ function getResend() {
 }
 
 export async function POST(req: Request) {
+  // ハートフルサービス一旦中止のため通知メール送信を停止（2026-07-25）
+  return new Response('Heartful service temporarily suspended', { status: 200 });
+
   try {
     const body = await req.json();
     const event = body.event;

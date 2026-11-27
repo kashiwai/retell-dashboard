@@ -33,13 +33,13 @@ export async function GET() {
         return NextResponse.json({ error: 'Fish Audioのエージェントがまだ設定されていません' }, { status: 404 });
       }
       const config = await getFishAgentConfig(tenant.fish_agent_id);
-      return NextResponse.json({ provider: 'fish_audio', prompt: config?.prompt?.system_prompt ?? '' });
+      return NextResponse.json({ provider: 'fish_audio', prompt: config?.prompt?.system_prompt ?? '', companyName: tenant.company_name ?? '' });
     } else {
       if (!tenant.llm_id) {
         return NextResponse.json({ error: 'Retellのエージェントがまだ設定されていません' }, { status: 404 });
       }
       const llm = await getRetellLlm(tenant.llm_id);
-      return NextResponse.json({ provider: 'retell', prompt: (llm as any)?.general_prompt ?? '' });
+      return NextResponse.json({ provider: 'retell', prompt: (llm as any)?.general_prompt ?? '', companyName: tenant.company_name ?? '' });
     }
   } catch (error: any) {
     console.error('[dashboard/script] GET error:', error);
