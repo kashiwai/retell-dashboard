@@ -105,6 +105,20 @@ input::placeholder, textarea::placeholder {
   color: #9ca3af !important;
 }
 
+/* 管理画面(/admin配下)は白背景の画面なので、上の濃紺ダッシュボード向け設定を丸ごと上書きする */
+.admin-light input,
+.admin-light textarea,
+.admin-light select {
+  color: #111827 !important;
+  background: #ffffff !important;
+  border: 1px solid #d1d5db !important;
+  border-radius: 8px !important;
+}
+.admin-light input::placeholder,
+.admin-light textarea::placeholder {
+  color: #9ca3af !important;
+}
+
 @keyframes pulse-live {
   0%, 100% { opacity: 1; }
   50% { opacity: 0.4; }
