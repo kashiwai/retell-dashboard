@@ -44,7 +44,7 @@ export default function KnowledgeBasePage() {
             { href: '/dashboard', label: '設定', icon: '⚙' },
           ].map(n => (
             <Link key={n.label} href={n.href} className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-all"
-              style={(n as any).active ? { background: 'rgba(1,201,253,0.12)', border: '1px solid rgba(1,201,253,0.25)', color: '#01C9FD', fontWeight: 600 } : { border: '1px solid transparent', color: 'rgba(240,244,255,0.6)' }}>
+              style={(n as any).active ? { background: 'rgba(1,201,253,0.12)', border: '1px solid rgba(1,201,253,0.25)', color: '#01C9FD', fontWeight: 600 } : { border: '1px solid transparent', color: 'rgba(240,244,255,0.95)' }}>
               <span>{n.icon}</span>{n.label}
             </Link>
           ))}
@@ -55,7 +55,7 @@ export default function KnowledgeBasePage() {
         <div className="flex items-center justify-between px-8 py-4 border-b" style={{ borderColor: 'rgba(255,255,255,0.07)' }}>
           <div>
             <h1 className="text-xl font-bold text-white">ナレッジベース</h1>
-            <p className="text-xs mt-0.5" style={{ color: 'rgba(240,244,255,0.45)' }}>AIが参照するFAQ・対応マニュアル</p>
+            <p className="text-xs mt-0.5" style={{ color: 'rgba(240,244,255,0.8)' }}>AIが参照するFAQ・対応マニュアル</p>
           </div>
           <button className="flex items-center gap-2 px-4 py-2 rounded-2xl text-sm font-semibold"
             style={{ background: 'linear-gradient(135deg,#01C9FD,#00A5FD)', color: '#0E1530' }}>
@@ -90,12 +90,12 @@ export default function KnowledgeBasePage() {
 
           {/* Knowledge Base List */}
           {loading ? (
-            <div className="text-center py-12" style={{ color: 'rgba(240,244,255,0.35)' }}>読み込み中...</div>
+            <div className="text-center py-12" style={{ color: 'rgba(240,244,255,0.7)' }}>読み込み中...</div>
           ) : items.length === 0 ? (
             <div className="p-6 rounded-3xl text-center" style={{ background: 'rgba(255,255,255,0.04)', border: '1px dashed rgba(255,255,255,0.1)' }}>
               <p className="text-4xl mb-3">📚</p>
               <p className="text-sm font-semibold text-white mb-1">ナレッジベースが未設定です</p>
-              <p className="text-xs" style={{ color: 'rgba(240,244,255,0.4)' }}>上のフォームからFAQを追加するか、Retellダッシュボードで設定してください</p>
+              <p className="text-xs" style={{ color: 'rgba(240,244,255,0.75)' }}>上のフォームからFAQを追加するか、Retellダッシュボードで設定してください</p>
             </div>
           ) : (
             <div className="flex flex-col gap-3">
@@ -106,14 +106,14 @@ export default function KnowledgeBasePage() {
                     style={{ background: 'rgba(1,201,253,0.12)' }}>📄</div>
                   <div className="flex-1 min-w-0">
                     <p className="font-semibold text-white truncate">{kb.name}</p>
-                    {kb.description && <p className="text-xs truncate" style={{ color: 'rgba(240,244,255,0.45)' }}>{kb.description}</p>}
-                    {kb.updated_at && <p className="text-[10px] mt-0.5" style={{ color: 'rgba(240,244,255,0.3)' }}>更新: {new Date(kb.updated_at).toLocaleDateString('ja-JP')}</p>}
+                    {kb.description && <p className="text-xs truncate" style={{ color: 'rgba(240,244,255,0.8)' }}>{kb.description}</p>}
+                    {kb.updated_at && <p className="text-[10px] mt-0.5" style={{ color: 'rgba(240,244,255,0.65)' }}>更新: {new Date(kb.updated_at).toLocaleDateString('ja-JP')}</p>}
                   </div>
                   <div className="flex items-center gap-2">
                     {kb.document_count !== undefined && (
                       <span className="text-xs px-2 py-1 rounded-lg" style={{ background: 'rgba(1,201,253,0.1)', color: '#01C9FD' }}>{kb.document_count}件</span>
                     )}
-                    <button className="text-xs px-3 py-1.5 rounded-xl" style={{ background: 'rgba(255,255,255,0.06)', color: 'rgba(240,244,255,0.6)' }}>編集</button>
+                    <button className="text-xs px-3 py-1.5 rounded-xl" style={{ background: 'rgba(255,255,255,0.06)', color: 'rgba(240,244,255,0.95)' }}>編集</button>
                   </div>
                 </div>
               ))}

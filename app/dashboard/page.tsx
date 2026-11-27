@@ -101,12 +101,12 @@ export default function LiveMonitoringPage() {
         </div>
         <div className="mx-3 mb-3 px-3 py-2 rounded-xl flex items-center gap-2 cursor-pointer" style={{ background:'rgba(255,255,255,0.05)', border:'1px solid rgba(255,255,255,0.08)' }}>
           <span className="text-xs text-white truncate flex-1">株式会社ミカタ</span>
-          <span style={{ color:'rgba(240,244,255,0.4)', fontSize:10 }}>▾</span>
+          <span style={{ color:'rgba(240,244,255,0.75)', fontSize:10 }}>▾</span>
         </div>
         <nav className="flex-1 px-2 flex flex-col gap-0.5">
           {NAVS.map((n) => (
             <Link key={n.label} href={n.href} className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-all"
-              style={n.active ? { background:'rgba(1,201,253,0.12)', border:'1px solid rgba(1,201,253,0.25)', color:'#01C9FD', fontWeight:600 } : { border:'1px solid transparent', color:'rgba(240,244,255,0.6)' }}>
+              style={n.active ? { background:'rgba(1,201,253,0.12)', border:'1px solid rgba(1,201,253,0.25)', color:'#01C9FD', fontWeight:600 } : { border:'1px solid transparent', color:'rgba(240,244,255,0.95)' }}>
               <span style={{ fontSize:14 }}>{n.icon}</span>{n.label}
             </Link>
           ))}
@@ -132,19 +132,19 @@ export default function LiveMonitoringPage() {
                 <span className="w-1.5 h-1.5 rounded-full inline-block" style={{ background:'#FD4B6B', animation:'pulse 2s infinite' }}/>LIVE
               </span>
             </div>
-            <p className="text-xs mt-0.5" style={{ color:'rgba(240,244,255,0.45)' }}>
+            <p className="text-xs mt-0.5" style={{ color:'rgba(240,244,255,0.8)' }}>
               リアルタイムの通話状況を監視しています
               {!loading && <span className="ml-2">· {lastUpdated.toLocaleTimeString('ja-JP')}</span>}
             </p>
           </div>
           <div className="flex items-center gap-2">
-            <button className="px-4 py-2 rounded-xl text-sm" style={{ background:'rgba(255,255,255,0.06)', border:'1px solid rgba(255,255,255,0.1)', color:'rgba(240,244,255,0.7)' }}>
+            <button className="px-4 py-2 rounded-xl text-sm" style={{ background:'rgba(255,255,255,0.06)', border:'1px solid rgba(255,255,255,0.1)', color:'rgba(240,244,255,1.0)' }}>
               ▼ フィルター
             </button>
-            <button className="px-4 py-2 rounded-xl text-sm" style={{ background:'rgba(255,255,255,0.06)', border:'1px solid rgba(255,255,255,0.1)', color:'rgba(240,244,255,0.7)' }}>
+            <button className="px-4 py-2 rounded-xl text-sm" style={{ background:'rgba(255,255,255,0.06)', border:'1px solid rgba(255,255,255,0.1)', color:'rgba(240,244,255,1.0)' }}>
               すべてのチャンネル ▾
             </button>
-            <button onClick={fetchData} className="w-9 h-9 rounded-xl flex items-center justify-center" style={{ background:'rgba(255,255,255,0.06)', border:'1px solid rgba(255,255,255,0.1)', color:'rgba(240,244,255,0.7)' }}>↻</button>
+            <button onClick={fetchData} className="w-9 h-9 rounded-xl flex items-center justify-center" style={{ background:'rgba(255,255,255,0.06)', border:'1px solid rgba(255,255,255,0.1)', color:'rgba(240,244,255,1.0)' }}>↻</button>
           </div>
         </div>
 
@@ -158,10 +158,10 @@ export default function LiveMonitoringPage() {
                   <span style={{ color:k.color }}>{k.icon}</span>
                 </div>
                 <p className="text-3xl font-bold text-white">
-                  {loading ? <span style={{ color:'rgba(240,244,255,0.3)' }}>—</span> : k.value}
-                  <span className="text-lg font-normal ml-0.5" style={{ color:'rgba(240,244,255,0.5)' }}>{k.unit}</span>
+                  {loading ? <span style={{ color:'rgba(240,244,255,0.65)' }}>—</span> : k.value}
+                  <span className="text-lg font-normal ml-0.5" style={{ color:'rgba(240,244,255,0.85)' }}>{k.unit}</span>
                 </p>
-                <p className="text-xs mt-0.5" style={{ color:'rgba(240,244,255,0.45)' }}>{k.label}</p>
+                <p className="text-xs mt-0.5" style={{ color:'rgba(240,244,255,0.8)' }}>{k.label}</p>
                 <p className="text-xs mt-1 font-medium" style={{ color:k.subColor }}>{k.sub}</p>
               </div>
             ))}
@@ -176,19 +176,19 @@ export default function LiveMonitoringPage() {
                   {calls.filter(c=>c.status==='active').length}件の通話中
                 </span>
               </div>
-              <button className="px-3 py-1.5 rounded-xl text-xs" style={{ background:'rgba(255,255,255,0.05)', border:'1px solid rgba(255,255,255,0.08)', color:'rgba(240,244,255,0.6)' }}>⚙ 表示設定</button>
+              <button className="px-3 py-1.5 rounded-xl text-xs" style={{ background:'rgba(255,255,255,0.05)', border:'1px solid rgba(255,255,255,0.08)', color:'rgba(240,244,255,0.95)' }}>⚙ 表示設定</button>
             </div>
 
-            <div className="grid px-6 py-3 text-[10px] font-semibold" style={{ gridTemplateColumns:'110px 1fr 130px 100px 100px 1fr 48px', color:'rgba(240,244,255,0.4)', borderBottom:'1px solid rgba(255,255,255,0.05)' }}>
+            <div className="grid px-6 py-3 text-[10px] font-semibold" style={{ gridTemplateColumns:'110px 1fr 130px 100px 100px 1fr 48px', color:'rgba(240,244,255,0.75)', borderBottom:'1px solid rgba(255,255,255,0.05)' }}>
               {['ステータス','発信者','電話番号','経過時間','AI対応状況','AIエージェント',''].map(h=><span key={h}>{h}</span>)}
             </div>
 
             {loading ? (
-              <div className="text-center py-12" style={{ color:'rgba(240,244,255,0.35)' }}>
+              <div className="text-center py-12" style={{ color:'rgba(240,244,255,0.7)' }}>
                 <p className="text-sm">通話データを読み込んでいます...</p>
               </div>
             ) : calls.length === 0 ? (
-              <div className="text-center py-12" style={{ color:'rgba(240,244,255,0.35)' }}>
+              <div className="text-center py-12" style={{ color:'rgba(240,244,255,0.7)' }}>
                 <p className="text-sm">現在通話中の呼はありません</p>
               </div>
             ) : (
@@ -199,7 +199,7 @@ export default function LiveMonitoringPage() {
                   <div>
                     {c.status==='active'
                       ? <span className="flex items-center gap-1.5 text-xs font-semibold" style={{ color:'#01C9FD' }}><span className="w-1.5 h-1.5 rounded-full" style={{ background:'#01C9FD' }}/>通話中</span>
-                      : <span className="text-xs" style={{ color:'rgba(240,244,255,0.4)' }}>⊙ 待機中</span>}
+                      : <span className="text-xs" style={{ color:'rgba(240,244,255,0.75)' }}>⊙ 待機中</span>}
                   </div>
                   <div className="flex items-center gap-2.5">
                     <div className="w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0" style={{ background:COLORS[i%COLORS.length], color:'#0E1530' }}>
@@ -207,10 +207,10 @@ export default function LiveMonitoringPage() {
                     </div>
                     <div>
                       <p className="text-sm font-semibold text-white">{c.caller_name ?? '不明'}</p>
-                      <p className="text-xs" style={{ color:'rgba(240,244,255,0.4)' }}>{c.caller_topic}</p>
+                      <p className="text-xs" style={{ color:'rgba(240,244,255,0.75)' }}>{c.caller_topic}</p>
                     </div>
                   </div>
-                  <span className="text-sm" style={{ color:'rgba(240,244,255,0.6)' }}>{c.phone}</span>
+                  <span className="text-sm" style={{ color:'rgba(240,244,255,0.95)' }}>{c.phone}</span>
                   <span className="text-sm font-mono text-white">{c.duration}</span>
                   <div>
                     {c.ai_status==='ai'       && <span className="badge-active">AI対応中</span>}
@@ -218,21 +218,21 @@ export default function LiveMonitoringPage() {
                     {c.ai_status==='waiting'  && <span className="badge-wait">待機中</span>}
                   </div>
                   <div>
-                    {c.agent!=='-' ? <><p className="text-xs text-white">{c.agent}</p><p className="text-[10px]" style={{ color:'rgba(240,244,255,0.35)' }}>v2.1.0</p></> : <span style={{ color:'rgba(240,244,255,0.3)' }}>-</span>}
+                    {c.agent!=='-' ? <><p className="text-xs text-white">{c.agent}</p><p className="text-[10px]" style={{ color:'rgba(240,244,255,0.7)' }}>v2.1.0</p></> : <span style={{ color:'rgba(240,244,255,0.65)' }}>-</span>}
                   </div>
-                  <button className="w-7 h-7 rounded-lg flex items-center justify-center" style={{ background:'rgba(255,255,255,0.06)', color:'rgba(240,244,255,0.5)' }}>···</button>
+                  <button className="w-7 h-7 rounded-lg flex items-center justify-center" style={{ background:'rgba(255,255,255,0.06)', color:'rgba(240,244,255,0.85)' }}>···</button>
                 </div>
               ))
             )}
 
             <div className="flex items-center justify-between px-6 py-4">
-              <p className="text-xs" style={{ color:'rgba(240,244,255,0.4)' }}>
+              <p className="text-xs" style={{ color:'rgba(240,244,255,0.75)' }}>
                 全 {calls.length} 件を表示
               </p>
               <div className="flex items-center gap-1">
-                <button className="w-7 h-7 rounded-lg flex items-center justify-center text-xs" style={{ background:'rgba(255,255,255,0.05)', color:'rgba(240,244,255,0.4)' }}>‹</button>
+                <button className="w-7 h-7 rounded-lg flex items-center justify-center text-xs" style={{ background:'rgba(255,255,255,0.05)', color:'rgba(240,244,255,0.75)' }}>‹</button>
                 <button className="w-7 h-7 rounded-lg flex items-center justify-center text-xs font-bold" style={{ background:'#01C9FD', color:'#0E1530' }}>1</button>
-                <button className="w-7 h-7 rounded-lg flex items-center justify-center text-xs" style={{ background:'rgba(255,255,255,0.05)', color:'rgba(240,244,255,0.4)' }}>›</button>
+                <button className="w-7 h-7 rounded-lg flex items-center justify-center text-xs" style={{ background:'rgba(255,255,255,0.05)', color:'rgba(240,244,255,0.75)' }}>›</button>
               </div>
             </div>
           </div>

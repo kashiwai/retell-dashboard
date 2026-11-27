@@ -46,7 +46,7 @@ export default function AnalyticsPage() {
             { href: '/dashboard', label: '設定', icon: '⚙' },
           ].map(n => (
             <Link key={n.label} href={n.href} className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-all"
-              style={(n as any).active ? { background: 'rgba(1,201,253,0.12)', border: '1px solid rgba(1,201,253,0.25)', color: '#01C9FD', fontWeight: 600 } : { border: '1px solid transparent', color: 'rgba(240,244,255,0.6)' }}>
+              style={(n as any).active ? { background: 'rgba(1,201,253,0.12)', border: '1px solid rgba(1,201,253,0.25)', color: '#01C9FD', fontWeight: 600 } : { border: '1px solid transparent', color: 'rgba(240,244,255,0.95)' }}>
               <span>{n.icon}</span>{n.label}
             </Link>
           ))}
@@ -58,9 +58,9 @@ export default function AnalyticsPage() {
         <div className="flex items-center justify-between px-8 py-4 border-b" style={{ borderColor: 'rgba(255,255,255,0.07)' }}>
           <div>
             <h1 className="text-xl font-bold text-white">分析レポート</h1>
-            <p className="text-xs mt-0.5" style={{ color: 'rgba(240,244,255,0.45)' }}>過去7日間の通話パフォーマンス</p>
+            <p className="text-xs mt-0.5" style={{ color: 'rgba(240,244,255,0.8)' }}>過去7日間の通話パフォーマンス</p>
           </div>
-          <button className="px-4 py-2 rounded-xl text-sm" style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', color: 'rgba(240,244,255,0.7)' }}>
+          <button className="px-4 py-2 rounded-xl text-sm" style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', color: 'rgba(240,244,255,1.0)' }}>
             ⬇ エクスポート
           </button>
         </div>
@@ -75,9 +75,9 @@ export default function AnalyticsPage() {
               { label: 'AI解決率', value: loading ? '—' : `${data?.resolutionRate ?? 0}`, unit: '%', color: '#FD7783' },
             ].map(k => (
               <div key={k.label} className="p-5 rounded-3xl" style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)' }}>
-                <p className="text-xs mb-2" style={{ color: 'rgba(240,244,255,0.45)' }}>{k.label}</p>
+                <p className="text-xs mb-2" style={{ color: 'rgba(240,244,255,0.8)' }}>{k.label}</p>
                 <p className="text-3xl font-bold" style={{ color: k.color }}>
-                  {k.value}<span className="text-base font-normal ml-1" style={{ color: 'rgba(240,244,255,0.4)' }}>{k.unit}</span>
+                  {k.value}<span className="text-base font-normal ml-1" style={{ color: 'rgba(240,244,255,0.75)' }}>{k.unit}</span>
                 </p>
               </div>
             ))}
@@ -87,14 +87,14 @@ export default function AnalyticsPage() {
           <div className="p-6 rounded-3xl mb-6" style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)' }}>
             <h2 className="font-semibold text-white mb-5">日別通話数（過去7日間）</h2>
             {loading ? (
-              <div className="h-40 flex items-center justify-center" style={{ color: 'rgba(240,244,255,0.3)' }}>データ読み込み中...</div>
+              <div className="h-40 flex items-center justify-center" style={{ color: 'rgba(240,244,255,0.65)' }}>データ読み込み中...</div>
             ) : (
               <div className="flex items-end gap-3" style={{ height: 160 }}>
                 {(data?.dailyStats ?? []).map((d, i) => (
                   <div key={i} className="flex-1 flex flex-col items-center gap-2">
                     <p className="text-xs font-bold" style={{ color: '#01C9FD' }}>{d.calls}</p>
                     <div className="w-full rounded-t-xl" style={{ height: `${Math.max((d.calls / maxCalls) * 120, 4)}px`, background: i === (data?.dailyStats?.length ?? 1) - 1 ? 'linear-gradient(to top,#01C9FD,#00A5FD)' : 'rgba(1,201,253,0.3)', transition: 'height 0.5s' }}/>
-                    <p className="text-[10px]" style={{ color: 'rgba(240,244,255,0.4)' }}>{d.date}</p>
+                    <p className="text-[10px]" style={{ color: 'rgba(240,244,255,0.75)' }}>{d.date}</p>
                   </div>
                 ))}
               </div>
@@ -107,7 +107,7 @@ export default function AnalyticsPage() {
               <h2 className="font-semibold text-white mb-4">ピーク時間帯</h2>
               <div className="text-center py-4">
                 <p className="text-5xl font-bold" style={{ color: '#01C9FD' }}>{loading ? '—' : (data?.peakHour ?? '—')}</p>
-                <p className="text-sm mt-2" style={{ color: 'rgba(240,244,255,0.5)' }}>最も通話が多い時間帯</p>
+                <p className="text-sm mt-2" style={{ color: 'rgba(240,244,255,0.85)' }}>最も通話が多い時間帯</p>
               </div>
             </div>
             <div className="p-6 rounded-3xl" style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)' }}>

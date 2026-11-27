@@ -43,7 +43,7 @@ export default function AgentsPage() {
             { href: '/dashboard', label: '設定', icon: '⚙' },
           ].map(n => (
             <Link key={n.label} href={n.href} className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-all"
-              style={(n as any).active ? { background: 'rgba(1,201,253,0.12)', border: '1px solid rgba(1,201,253,0.25)', color: '#01C9FD', fontWeight: 600 } : { border: '1px solid transparent', color: 'rgba(240,244,255,0.6)' }}>
+              style={(n as any).active ? { background: 'rgba(1,201,253,0.12)', border: '1px solid rgba(1,201,253,0.25)', color: '#01C9FD', fontWeight: 600 } : { border: '1px solid transparent', color: 'rgba(240,244,255,0.95)' }}>
               <span>{n.icon}</span>{n.label}
             </Link>
           ))}
@@ -54,7 +54,7 @@ export default function AgentsPage() {
         <div className="flex items-center justify-between px-8 py-4 border-b" style={{ borderColor: 'rgba(255,255,255,0.07)' }}>
           <div>
             <h1 className="text-xl font-bold text-white">AIエージェント</h1>
-            <p className="text-xs mt-0.5" style={{ color: 'rgba(240,244,255,0.45)' }}>Retell AIエージェント一覧</p>
+            <p className="text-xs mt-0.5" style={{ color: 'rgba(240,244,255,0.8)' }}>Retell AIエージェント一覧</p>
           </div>
           <div className="flex items-center gap-2">
             <span className="px-3 py-1.5 rounded-full text-xs font-semibold" style={{ background: 'rgba(31,191,117,0.15)', color: '#1FBF75' }}>
@@ -65,9 +65,9 @@ export default function AgentsPage() {
 
         <div className="px-8 py-6">
           {loading ? (
-            <div className="text-center py-20" style={{ color: 'rgba(240,244,255,0.35)' }}>エージェント情報を読み込んでいます...</div>
+            <div className="text-center py-20" style={{ color: 'rgba(240,244,255,0.7)' }}>エージェント情報を読み込んでいます...</div>
           ) : agents.length === 0 ? (
-            <div className="text-center py-20" style={{ color: 'rgba(240,244,255,0.35)' }}>エージェントが見つかりません</div>
+            <div className="text-center py-20" style={{ color: 'rgba(240,244,255,0.7)' }}>エージェントが見つかりません</div>
           ) : (
             <div className="grid grid-cols-2 gap-4">
               {agents.map((agent) => (
@@ -82,7 +82,7 @@ export default function AgentsPage() {
                         <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold flex-shrink-0"
                           style={{ background: 'rgba(31,191,117,0.15)', color: '#1FBF75' }}>稼働中</span>
                       </div>
-                      <p className="text-xs" style={{ color: 'rgba(240,244,255,0.4)' }}>
+                      <p className="text-xs" style={{ color: 'rgba(240,244,255,0.75)' }}>
                         ID: {(agent.agent_id ?? '').slice(0, 16)}...
                       </p>
                     </div>
@@ -90,15 +90,15 @@ export default function AgentsPage() {
                   <div className="grid grid-cols-2 gap-3">
                     <div className="p-3 rounded-2xl text-center" style={{ background: 'rgba(255,255,255,0.04)' }}>
                       <p className="text-xl font-bold" style={{ color: '#01C9FD' }}>{agent.todayCalls ?? 0}</p>
-                      <p className="text-[10px]" style={{ color: 'rgba(240,244,255,0.4)' }}>本日の通話数</p>
+                      <p className="text-[10px]" style={{ color: 'rgba(240,244,255,0.75)' }}>本日の通話数</p>
                     </div>
                     <div className="p-3 rounded-2xl text-center" style={{ background: 'rgba(255,255,255,0.04)' }}>
                       <p className="text-xs font-semibold" style={{ color: '#1FBF75' }}>v2.1.0</p>
-                      <p className="text-[10px]" style={{ color: 'rgba(240,244,255,0.4)' }}>バージョン</p>
+                      <p className="text-[10px]" style={{ color: 'rgba(240,244,255,0.75)' }}>バージョン</p>
                     </div>
                   </div>
                   {agent.voice_id && (
-                    <p className="text-xs mt-3" style={{ color: 'rgba(240,244,255,0.35)' }}>
+                    <p className="text-xs mt-3" style={{ color: 'rgba(240,244,255,0.7)' }}>
                       🎙 音声ID: {agent.voice_id.slice(0, 20)}...
                     </p>
                   )}

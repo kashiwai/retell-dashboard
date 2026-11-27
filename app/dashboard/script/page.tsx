@@ -61,7 +61,7 @@ export default function ScriptPage() {
             { href: '/dashboard/knowledge-base', label: 'ナレッジベース', icon: '📚' },
           ].map((n) => (
             <Link key={n.label} href={n.href} className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-all"
-              style={(n as any).active ? { background: 'rgba(1,201,253,0.12)', border: '1px solid rgba(1,201,253,0.25)', color: '#01C9FD', fontWeight: 600 } : { border: '1px solid transparent', color: 'rgba(240,244,255,0.6)' }}>
+              style={(n as any).active ? { background: 'rgba(1,201,253,0.12)', border: '1px solid rgba(1,201,253,0.25)', color: '#01C9FD', fontWeight: 600 } : { border: '1px solid transparent', color: 'rgba(240,244,255,0.95)' }}>
               <span>{n.icon}</span>{n.label}
             </Link>
           ))}
@@ -72,7 +72,7 @@ export default function ScriptPage() {
         <div className="flex items-center justify-between px-8 py-4 border-b" style={{ borderColor: 'rgba(255,255,255,0.07)' }}>
           <div>
             <h1 className="text-xl font-bold text-white">台本の編集</h1>
-            <p className="text-xs mt-0.5" style={{ color: 'rgba(240,244,255,0.45)' }}>
+            <p className="text-xs mt-0.5" style={{ color: 'rgba(240,244,255,0.8)' }}>
               電話に出るAIの話し方・対応内容をここで編集できます(接続先の会社の画面を開く必要はありません)
             </p>
           </div>
@@ -80,7 +80,7 @@ export default function ScriptPage() {
 
         <div className="px-8 py-6 max-w-4xl">
           {loading ? (
-            <div className="text-center py-20" style={{ color: 'rgba(240,244,255,0.35)' }}>読み込み中...</div>
+            <div className="text-center py-20" style={{ color: 'rgba(240,244,255,0.7)' }}>読み込み中...</div>
           ) : (
             <>
               {error && (
@@ -93,7 +93,7 @@ export default function ScriptPage() {
                 onChange={(e) => setPrompt(e.target.value)}
                 rows={24}
                 className="w-full rounded-2xl p-4 text-sm font-mono leading-relaxed outline-none"
-                style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)', color: 'rgba(240,244,255,0.9)' }}
+                style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)', color: 'rgba(240,244,255,1.0)' }}
                 placeholder="台本(AIの話し方・対応の流れ)をここに書きます"
               />
               <div className="flex items-center gap-3 mt-4">
@@ -109,7 +109,7 @@ export default function ScriptPage() {
                   <span className="text-xs" style={{ color: '#1FBF75' }}>✓ {savedAt} に保存しました</span>
                 )}
               </div>
-              <p className="text-xs mt-3" style={{ color: 'rgba(240,244,255,0.35)' }}>
+              <p className="text-xs mt-3" style={{ color: 'rgba(240,244,255,0.7)' }}>
                 保存すると、次の通話からすぐにこの内容で応答します。
               </p>
             </>
