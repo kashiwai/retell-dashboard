@@ -67,29 +67,44 @@ export async function setFishAgentWebhook(
   })
 }
 
+// TwilioのSIPシグナリング用IPアドレス範囲(全リージョン)。
+// Twilioからの着信だけをFish Audio側で受け付けるための許可リストに使う。
+// 参照: https://www.twilio.com/docs/sip-trunking/ip-addresses
+export const TWILIO_SIGNALING_IP_RANGES = [
+  '54.172.60.0/30', '54.244.51.0/30', // 北米(バージニア/オレゴン)
+  '54.171.127.192/30', '35.156.191.128/30', // 欧州(アイルランド/フランクフルト)
+  '54.65.63.192/30', '54.169.127.128/30', '54.252.254.64/30', // アジア太平洋(東京/シンガポール/シドニー)
+  '177.71.206.192/30', // 南米(サンパウロ)
+]
+
 /**
  * 既存のTwilio電話番号をSIPトランク経由でFish Audioにインポートし、エージェントに紐付ける。
- * 日本の050番号での動作は未確認(ドキュメントに+81の明記なし)。本番投入前に実機で要確認。
+ * 日本の050番号での動作確認済み(2026-11-26、050-1793-9835で実施)。
+ * Twilio側は別途、新しいSIP Trunkを作成し、Origination URLに
+ * sip:1pv316az391.sip.livekit.cloud;transport=tcp を設定したうえで、この番号をそのTrunkに移す必要がある。
  */
 export async function importPhoneNumberToFishAudio(params: {
   phoneNumber: string
-  terminationUri: string
-  terminationAuthUsername?: string
-  terminationAuthPassword?: string
+  /** 未指定ならFISH_AUDIO_SIP_USERNAME(Twilio側に作成済みの専用認証情報)を使う */
+  inboundAuthUsername?: string
+  /** 未指定ならFISH_AUDIO_SIP_PASSWORD(Twilio側に作成済みの専用認証情報)を使う */
+  inboundAuthPassword?: string
   agentId?: string
 }): Promise<{ phone_number_id: string }> {
+  const authUsername = params.inboundAuthUsername || process.env.FISH_AUDIO_SIP_USERNAME
+  const authPassword = params.inboundAuthPassword || process.env.FISH_AUDIO_SIP_PASSWORD
   const res = await fishFetch('/phone-numbers', {
     method: 'POST',
     body: JSON.stringify({
       provider: 'sip',
       phone_number: params.phoneNumber,
-      termination_uri: params.terminationUri,
-      termination_auth_username: params.terminationAuthUsername,
-      termination_auth_password: params.terminationAuthPassword,
+      inbound_auth_username: authUsername,
+      inbound_auth_password: authPassword,
+      inbound_allowed_addresses: TWILIO_SIGNALING_IP_RANGES,
       ...(params.agentId ? { agent_id: params.agentId } : {}),
     }),
   })
-  return { phone_number_id: res.id || res.phone_number_id }
+  return { phone_number_id: res.phone_number_id }
 }
 
 /** 電話番号に紐付けるエージェントを変更 */
@@ -98,4 +113,18 @@ export async function bindFishPhoneNumber(phoneNumberId: string, agentId: string
     method: 'PATCH',
     body: JSON.stringify({ agent_id: agentId }),
   })
+}
+
+/** エージェントの現在の設定(台本=system_prompt含む)を取得 */
+export async function getFishAgentConfig(agentId: string): Promise<any> {
+  return fishFetch(`/agents/${agentId}/config`, { method: 'GET' })
+}
+
+/** エージェントの台本(system_prompt)だけを更新して公開する */
+export async function updateFishAgentPrompt(agentId: string, systemPrompt: string): Promise<void> {
+  await fishFetch(`/agents/${agentId}/config`, {
+    method: 'PATCH',
+    body: JSON.stringify({ prompt: { system_prompt: systemPrompt } }),
+  })
+  await publishFishAgent(agentId)
 }

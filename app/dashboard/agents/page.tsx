@@ -38,6 +38,7 @@ export default function AgentsPage() {
             { href: '/dashboard/calls', label: '通話履歴', icon: '📞' },
             { href: '/dashboard/analytics', label: '分析レポート', icon: '📈' },
             { href: '/dashboard/agents', label: 'AIエージェント', icon: '🤖', active: true },
+            { href: '/dashboard/script', label: '台本の編集', icon: '📝' },
             { href: '/dashboard/knowledge-base', label: 'ナレッジベース', icon: '📚' },
             { href: '/dashboard', label: '設定', icon: '⚙' },
           ].map(n => (
