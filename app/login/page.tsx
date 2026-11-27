@@ -62,7 +62,7 @@ function LoginForm() {
                 <input
                   type="email"
                   name="email"
-                  className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg bg-white text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   placeholder="メールアドレスを入力"
                   required
                   autoComplete="email"
@@ -81,7 +81,7 @@ function LoginForm() {
                 <input
                   type={showPassword ? 'text' : 'password'}
                   name="password"
-                  className="block w-full pl-10 pr-10 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="block w-full pl-10 pr-10 py-3 border border-gray-300 rounded-lg bg-white text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   placeholder="パスワードを入力"
                   required
                   autoComplete="current-password"
