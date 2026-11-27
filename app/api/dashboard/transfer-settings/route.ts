@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { getAgentTransferSetting, updateAgentTransferSetting } from '@/lib/provisioning/retell';
+import { getFishAgentTransferSetting, updateFishAgentTransferSetting } from '@/lib/provisioning/fish-audio';
 
 export const dynamic = 'force-dynamic';
 
@@ -26,15 +27,18 @@ export async function GET() {
   if ('error' in result) return NextResponse.json({ error: result.error }, { status: result.status });
   const tenant = result.tenant;
 
-  if (tenant.voice_provider === 'fish_audio') {
-    return NextResponse.json({ supported: false, provider: 'fish_audio' });
-  }
-
-  if (!tenant.llm_id) {
-    return NextResponse.json({ error: 'Retellのエージェントがまだ設定されていません' }, { status: 404 });
-  }
-
   try {
+    if (tenant.voice_provider === 'fish_audio') {
+      if (!tenant.fish_agent_id) {
+        return NextResponse.json({ error: 'Fish Audioのエージェントがまだ設定されていません' }, { status: 404 });
+      }
+      const setting = await getFishAgentTransferSetting(tenant.fish_agent_id);
+      return NextResponse.json({ supported: true, provider: 'fish_audio', ...setting });
+    }
+
+    if (!tenant.llm_id) {
+      return NextResponse.json({ error: 'Retellのエージェントがまだ設定されていません' }, { status: 404 });
+    }
     const setting = await getAgentTransferSetting(tenant.llm_id);
     return NextResponse.json({ supported: true, provider: 'retell', ...setting });
   } catch (error: any) {
@@ -49,14 +53,6 @@ export async function PUT(request: NextRequest) {
   if ('error' in result) return NextResponse.json({ error: result.error }, { status: result.status });
   const tenant = result.tenant;
 
-  if (tenant.voice_provider === 'fish_audio') {
-    return NextResponse.json({ error: 'Fish Audioのエージェントは、この画面からの転送設定には対応していません' }, { status: 400 });
-  }
-
-  if (!tenant.llm_id) {
-    return NextResponse.json({ error: 'Retellのエージェントがまだ設定されていません' }, { status: 404 });
-  }
-
   const body = await request.json();
   const enabled: boolean = !!body.enabled;
   const phoneNumber: string | undefined = body.phoneNumber;
@@ -67,6 +63,17 @@ export async function PUT(request: NextRequest) {
   }
 
   try {
+    if (tenant.voice_provider === 'fish_audio') {
+      if (!tenant.fish_agent_id) {
+        return NextResponse.json({ error: 'Fish Audioのエージェントがまだ設定されていません' }, { status: 404 });
+      }
+      await updateFishAgentTransferSetting(tenant.fish_agent_id, { enabled, phoneNumber, condition });
+      return NextResponse.json({ success: true });
+    }
+
+    if (!tenant.llm_id) {
+      return NextResponse.json({ error: 'Retellのエージェントがまだ設定されていません' }, { status: 404 });
+    }
     await updateAgentTransferSetting(tenant.llm_id, { enabled, phoneNumber, condition });
     return NextResponse.json({ success: true });
   } catch (error: any) {

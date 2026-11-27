@@ -128,3 +128,43 @@ export async function updateFishAgentPrompt(agentId: string, systemPrompt: strin
   })
   await publishFishAgent(agentId)
 }
+
+export interface FishTransferSetting {
+  enabled: boolean
+  phoneNumber?: string
+  /** 転送する条件(人間が読む説明文。AIがこの条件を見て転送するかどうかを判断する) */
+  condition?: string
+}
+
+/** 現在設定されている電話転送(transfer_destinations)の内容を取得。1件目のみを対象とする */
+export async function getFishAgentTransferSetting(agentId: string): Promise<FishTransferSetting> {
+  const config = await fishFetch(`/agents/${agentId}/config`, { method: 'GET' })
+  const dest = (config.conversation?.transfer_destinations ?? [])[0]
+  if (!dest) return { enabled: false }
+  return { enabled: true, phoneNumber: dest.phone_number, condition: dest.description }
+}
+
+/**
+ * 電話転送(transfer_destinations)の有効/無効・転送先・条件を設定。
+ * 保留音を流したまま裏で転送先に電話し(mode:'warm')、相手が出たら内容を伝えたうえで
+ * 「つないでいい?」と確認してから(warm_connect:'confirm')お客様とつなぐ。
+ */
+export async function updateFishAgentTransferSetting(agentId: string, setting: FishTransferSetting): Promise<void> {
+  const destinations = setting.enabled
+    ? [{
+        type: 'phone',
+        label: '担当者',
+        phone_number: setting.phoneNumber,
+        description: setting.condition || 'お客様の用件が、人による対応が必要だと判断した場合に呼ぶ。',
+        mode: 'warm',
+        warm_connect: 'confirm',
+        warm_briefing_instructions: 'この通話でお客様から伺った内容を、電話口の相手に簡潔に伝えてください。',
+      }]
+    : []
+
+  await fishFetch(`/agents/${agentId}/config`, {
+    method: 'PATCH',
+    body: JSON.stringify({ conversation: { transfer_destinations: destinations } }),
+  })
+  await publishFishAgent(agentId)
+}
