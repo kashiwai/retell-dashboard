@@ -28,18 +28,32 @@ const NAVS = [
   { href:'/dashboard/analytics',          label:'分析レポート',       icon:'📈' },
   { href:'/dashboard/agents',             label:'AIエージェント',     icon:'🤖' },
   { href:'/dashboard/knowledge-base',     label:'ナレッジベース',     icon:'📚' },
-  { href:'/dashboard',                    label:'設定',               icon:'⚙'  },
+  { href:'/dashboard/settings',            label:'設定',               icon:'⚙'  },
 ]
 
 const COLORS = ['#01C9FD','#FD7783','#1FBF75','#F5A623','#00A5FD','#FD4B83','#4FE0FF']
 
+const TEST_COMPANY_NAME = 'テスト会社'
+
 export default function LiveMonitoringPage() {
+  const [companyName, setCompanyName] = useState<string | null>(null)
   const [stats, setStats] = useState<DashboardStats | null>(null)
   const [calls, setCalls] = useState<CallData[]>([])
   const [loading, setLoading] = useState(true)
   const [lastUpdated, setLastUpdated] = useState<Date>(new Date())
 
-  const fetchData = useCallback(async () => {
+  // 会社名が確定するまでは安全側(実データを出さない)に倒す
+  const isTestCompany = companyName === TEST_COMPANY_NAME
+
+  const fetchData = useCallback(async (testCompany: boolean) => {
+    // テスト会社以外(実際の会社)が見ている場合は、全テナント横断のテストデータを出さない
+    if (!testCompany) {
+      setStats(null)
+      setCalls([])
+      setLastUpdated(new Date())
+      setLoading(false)
+      return
+    }
     try {
       // KPI stats
       const statsRes = await fetch('/api/dashboard')
@@ -76,10 +90,20 @@ export default function LiveMonitoringPage() {
   }, [])
 
   useEffect(() => {
-    fetchData()
-    const interval = setInterval(fetchData, 30000) // 30秒ごと自動更新
+    fetch('/api/me/tenant')
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => {
+        setCompanyName(d?.tenant?.company_name || TEST_COMPANY_NAME)
+      })
+      .catch(() => setCompanyName(TEST_COMPANY_NAME))
+  }, [])
+
+  useEffect(() => {
+    if (companyName === null) return // 会社名が確定するまでは取得しない
+    fetchData(isTestCompany)
+    const interval = setInterval(() => fetchData(isTestCompany), 30000) // 30秒ごと自動更新
     return () => clearInterval(interval)
-  }, [fetchData])
+  }, [fetchData, companyName, isTestCompany])
 
   const kpiData = [
     { icon:'📞', label:'本日の総通話数', value: stats?.todaysCalls?.toString() ?? '—',   unit:'件', sub:'リアルタイム',           subColor:'#1FBF75', bg:'rgba(1,201,253,0.15)',    color:'#01C9FD' },
@@ -100,7 +124,7 @@ export default function LiveMonitoringPage() {
           </Link>
         </div>
         <div className="mx-3 mb-3 px-3 py-2 rounded-xl flex items-center gap-2 cursor-pointer" style={{ background:'rgba(255,255,255,0.05)', border:'1px solid rgba(255,255,255,0.08)' }}>
-          <span className="text-xs text-white truncate flex-1">テスト会社</span>
+          <span className="text-xs text-white truncate flex-1">{companyName ?? '読み込み中...'}</span>
           <span style={{ color:'rgba(240,244,255,0.75)', fontSize:10 }}>▾</span>
         </div>
         <nav className="flex-1 px-2 flex flex-col gap-0.5">
@@ -144,11 +168,28 @@ export default function LiveMonitoringPage() {
             <button className="px-4 py-2 rounded-xl text-sm" style={{ background:'rgba(255,255,255,0.06)', border:'1px solid rgba(255,255,255,0.1)', color:'rgba(240,244,255,1.0)' }}>
               すべてのチャンネル ▾
             </button>
-            <button onClick={fetchData} className="w-9 h-9 rounded-xl flex items-center justify-center" style={{ background:'rgba(255,255,255,0.06)', border:'1px solid rgba(255,255,255,0.1)', color:'rgba(240,244,255,1.0)' }}>↻</button>
+            <button onClick={() => fetchData(isTestCompany)} className="w-9 h-9 rounded-xl flex items-center justify-center" style={{ background:'rgba(255,255,255,0.06)', border:'1px solid rgba(255,255,255,0.1)', color:'rgba(240,244,255,1.0)' }}>↻</button>
           </div>
         </div>
 
         <div className="px-8 py-6 flex-1">
+
+          {isTestCompany ? (
+            <div className="mb-6 px-5 py-3 rounded-2xl flex items-center gap-2" style={{ background:'rgba(245,166,35,0.15)', border:'1px solid rgba(245,166,35,0.4)' }}>
+              <span style={{ fontSize:18 }}>⚠️</span>
+              <p className="text-sm font-bold" style={{ color:'#F5A623' }}>
+                これはテストデータです。実際のお客様の通話データではありません。
+              </p>
+            </div>
+          ) : (
+            !loading && (
+              <div className="mb-6 px-5 py-3 rounded-2xl" style={{ background:'rgba(1,201,253,0.08)', border:'1px solid rgba(1,201,253,0.2)' }}>
+                <p className="text-sm" style={{ color:'rgba(240,244,255,0.85)' }}>
+                  この会社専用のライブモニタリングはまだ準備中です。通話が始まるとここに表示されます。
+                </p>
+              </div>
+            )
+          )}
 
           {/* KPI Cards */}
           <div className="grid grid-cols-4 gap-4 mb-6">

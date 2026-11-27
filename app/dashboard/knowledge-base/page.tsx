@@ -41,7 +41,7 @@ export default function KnowledgeBasePage() {
             { href: '/dashboard/analytics', label: '分析レポート', icon: '📈' },
             { href: '/dashboard/agents', label: 'AIエージェント', icon: '🤖' },
             { href: '/dashboard/knowledge-base', label: 'ナレッジベース', icon: '📚', active: true },
-            { href: '/dashboard', label: '設定', icon: '⚙' },
+            { href: '/dashboard/settings', label: '設定', icon: '⚙' },
           ].map(n => (
             <Link key={n.label} href={n.href} className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-all"
               style={(n as any).active ? { background: 'rgba(1,201,253,0.12)', border: '1px solid rgba(1,201,253,0.25)', color: '#01C9FD', fontWeight: 600 } : { border: '1px solid transparent', color: 'rgba(240,244,255,0.95)' }}>
