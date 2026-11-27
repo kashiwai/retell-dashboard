@@ -22,6 +22,15 @@ export default function ScriptPage() {
   const [templates, setTemplates] = useState<ScriptTemplateSummary[]>([])
   const [showTemplates, setShowTemplates] = useState(false)
 
+  const [transferSupported, setTransferSupported] = useState(true)
+  const [transferEnabled, setTransferEnabled] = useState(false)
+  const [transferNumber, setTransferNumber] = useState('')
+  const [transferCondition, setTransferCondition] = useState('')
+  const [transferLoading, setTransferLoading] = useState(true)
+  const [transferSaving, setTransferSaving] = useState(false)
+  const [transferError, setTransferError] = useState<string | null>(null)
+  const [transferSavedAt, setTransferSavedAt] = useState<string | null>(null)
+
   useEffect(() => {
     fetch('/api/dashboard/script')
       .then(async (r) => {
@@ -38,7 +47,38 @@ export default function ScriptPage() {
       .then((r) => (r.ok ? r.json() : { templates: [] }))
       .then((d) => setTemplates(d.templates ?? []))
       .catch(() => {})
+
+    fetch('/api/dashboard/transfer-settings')
+      .then(async (r) => {
+        const d = await r.json()
+        if (!r.ok) throw new Error(d.error || '読み込みに失敗しました')
+        setTransferSupported(d.supported !== false)
+        setTransferEnabled(!!d.enabled)
+        setTransferNumber(d.phoneNumber ?? '')
+        setTransferCondition(d.condition ?? '')
+      })
+      .catch((e) => setTransferError(e.message))
+      .finally(() => setTransferLoading(false))
   }, [])
+
+  const handleSaveTransfer = async () => {
+    setTransferSaving(true)
+    setTransferError(null)
+    try {
+      const res = await fetch('/api/dashboard/transfer-settings', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ enabled: transferEnabled, phoneNumber: transferNumber, condition: transferCondition }),
+      })
+      const d = await res.json()
+      if (!res.ok) throw new Error(d.error || '保存に失敗しました')
+      setTransferSavedAt(new Date().toLocaleTimeString('ja-JP'))
+    } catch (e: any) {
+      setTransferError(e.message)
+    } finally {
+      setTransferSaving(false)
+    }
+  }
 
   const applyTemplate = (t: ScriptTemplateSummary) => {
     const filled = companyName
@@ -176,6 +216,82 @@ export default function ScriptPage() {
               <p className="text-xs mt-3" style={{ color: 'rgba(240,244,255,0.7)' }}>
                 保存すると、次の通話からすぐにこの内容で応答します。
               </p>
+
+              <div className="mt-8 p-5 rounded-3xl" style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)' }}>
+                <h2 className="text-sm font-bold text-white mb-1">電話転送の設定</h2>
+                <p className="text-xs mb-4" style={{ color: 'rgba(240,244,255,0.75)' }}>
+                  この台本で、人による対応が必要な場合に電話を転送するかどうかを決められます。
+                </p>
+
+                {transferLoading ? (
+                  <p className="text-xs" style={{ color: 'rgba(240,244,255,0.7)' }}>読み込み中...</p>
+                ) : !transferSupported ? (
+                  <p className="text-xs px-4 py-3 rounded-xl" style={{ background: 'rgba(245,166,35,0.12)', color: '#F5A623', border: '1px solid rgba(245,166,35,0.3)' }}>
+                    Fish Audioのエージェントは、現在この画面からの転送設定には対応していません。転送したい場合は、台本の中に転送先の案内を文章で書いてください。
+                  </p>
+                ) : (
+                  <>
+                    {transferError && (
+                      <div className="mb-3 px-4 py-2.5 rounded-xl text-sm" style={{ background: 'rgba(253,119,131,0.12)', color: '#FD7783', border: '1px solid rgba(253,119,131,0.25)' }}>
+                        {transferError}
+                      </div>
+                    )}
+                    <label className="flex items-center gap-2.5 mb-4 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={transferEnabled}
+                        onChange={(e) => setTransferEnabled(e.target.checked)}
+                        className="w-4 h-4"
+                      />
+                      <span className="text-sm text-white">この台本から電話転送を使う</span>
+                    </label>
+
+                    {transferEnabled && (
+                      <div className="space-y-3 mb-2">
+                        <div>
+                          <label className="block text-xs mb-1" style={{ color: 'rgba(240,244,255,0.75)' }}>転送先の電話番号</label>
+                          <input
+                            type="text"
+                            value={transferNumber}
+                            onChange={(e) => setTransferNumber(e.target.value)}
+                            placeholder="例：+819012345678"
+                            className="w-full rounded-xl px-3 py-2.5 text-sm outline-none"
+                            style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', color: 'rgba(240,244,255,1.0)' }}
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs mb-1" style={{ color: 'rgba(240,244,255,0.75)' }}>転送する条件(任意)</label>
+                          <input
+                            type="text"
+                            value={transferCondition}
+                            onChange={(e) => setTransferCondition(e.target.value)}
+                            placeholder="例：お客様の用件が、人による対応が必要だと判断した場合"
+                            className="w-full rounded-xl px-3 py-2.5 text-sm outline-none"
+                            style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', color: 'rgba(240,244,255,1.0)' }}
+                          />
+                          <p className="text-[11px] mt-1" style={{ color: 'rgba(240,244,255,0.6)' }}>
+                            AIはこの条件を見て、転送するかどうかをその場で判断します。空欄の場合は「人による対応が必要だと判断した場合」になります。
+                          </p>
+                        </div>
+                      </div>
+                    )}
+
+                    <div className="flex items-center gap-3 mt-2">
+                      <button
+                        onClick={handleSaveTransfer}
+                        disabled={transferSaving}
+                        className="px-5 py-2.5 rounded-xl text-sm font-semibold transition-all disabled:opacity-50"
+                        style={{ background: 'linear-gradient(135deg,#01C9FD,#1FBF75)', color: '#0E1530' }}
+                      >
+                        {transferSaving ? '保存しています...' : '転送設定を保存する'}
+                      </button>
+                      {transferSavedAt && (
+                        <span className="text-xs" style={{ color: '#1FBF75' }}>✓ {transferSavedAt} に保存しました</span>
+                      )}
+                    </div>
+                  </>
+                )}
+              </div>
             </>
           )}
         </div>
