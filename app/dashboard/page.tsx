@@ -100,7 +100,7 @@ export default function LiveMonitoringPage() {
           </Link>
         </div>
         <div className="mx-3 mb-3 px-3 py-2 rounded-xl flex items-center gap-2 cursor-pointer" style={{ background:'rgba(255,255,255,0.05)', border:'1px solid rgba(255,255,255,0.08)' }}>
-          <span className="text-xs text-white truncate flex-1">株式会社ミカタ</span>
+          <span className="text-xs text-white truncate flex-1">テスト会社</span>
           <span style={{ color:'rgba(240,244,255,0.75)', fontSize:10 }}>▾</span>
         </div>
         <nav className="flex-1 px-2 flex flex-col gap-0.5">
