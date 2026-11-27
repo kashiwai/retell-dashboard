@@ -95,6 +95,16 @@ input::placeholder, textarea::placeholder {
   color: rgba(240,244,255,0.35) !important;
 }
 
+/* ログイン画面は白背景のため、上の濃紺画面向け設定を個別に上書きする */
+.login-input {
+  color: #111827 !important;
+  background: #ffffff !important;
+  border: 1px solid #d1d5db !important;
+}
+.login-input::placeholder {
+  color: #9ca3af !important;
+}
+
 @keyframes pulse-live {
   0%, 100% { opacity: 1; }
   50% { opacity: 0.4; }
